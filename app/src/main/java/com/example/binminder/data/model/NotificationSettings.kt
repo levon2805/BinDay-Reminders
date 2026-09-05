@@ -3,7 +3,10 @@ package com.example.binminder.data.model
 import java.time.LocalTime
 
 /**
- * Settings for collection reminder notifications.
+ * User preferences for bin collection reminders and notifications.
+ * 
+ * Controls whether reminders are active, what time they fire, whether to notify
+ * the evening before collection, and the preferred application theme mode.
  */
 data class NotificationSettings(
     val reminderEnabled: Boolean = true,
@@ -11,4 +14,3 @@ data class NotificationSettings(
     val reminderEveningBefore: Boolean = true, // Evening before collection day
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM
 )
-

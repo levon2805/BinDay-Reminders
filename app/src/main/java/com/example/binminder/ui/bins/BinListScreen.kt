@@ -68,6 +68,9 @@ import com.example.binminder.ui.theme.getContrastingTextColor
 import com.example.binminder.ui.theme.parseBinColor
 import java.time.LocalDate
 
+/**
+ * Screen composable for managing household wheelie bin configurations.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BinListScreen(
@@ -100,6 +103,9 @@ fun BinListScreen(
     )
 }
 
+/**
+ * Layout structure for the wheelie bin list screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BinListContent(
@@ -203,7 +209,7 @@ fun BinListContent(
         }
     }
 
-    // Delete Confirmation Dialog
+    // Delete Confirmation Dialogue
     if (uiState.binToDelete != null) {
         AlertDialog(
             onDismissRequest = onCancelDeleteBin,
@@ -240,6 +246,9 @@ fun BinListContent(
     }
 }
 
+/**
+ * Card component displaying individual bin details, colour swatches, and action controls.
+ */
 @Composable
 fun WheelieBinCard(
     bin: Bin,
@@ -437,6 +446,9 @@ fun WheelieBinCard(
     }
 }
 
+/**
+ * Empty view displayed when no wheelie bins exist in the list.
+ */
 @Composable
 fun EmptyBinsView(
     onAddBinClicked: () -> Unit,
@@ -504,6 +516,9 @@ fun EmptyBinsView(
     }
 }
 
+/**
+ * Jetpack Compose preview function for the wheelie bin list screen.
+ */
 @Preview(showBackground = true)
 @Composable
 fun BinListScreenPreview() {

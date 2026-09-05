@@ -1,7 +1,9 @@
 package com.example.binminder.data.model
 
 /**
- * Data model for configuring a bin during the first-time setup wizard.
+ * Model for configuring individual bins during the initial setup wizard.
+ * 
+ * Allows users to review and customise preset bin configurations before saving them.
  */
 data class OnboardingBinSetup(
     val binType: String,

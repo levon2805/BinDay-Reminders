@@ -7,38 +7,55 @@ import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.data.service.CouncilLookupService
 import com.example.binminder.data.service.CouncilLookupServiceImpl
 import com.example.binminder.data.service.PostcodeLookupDto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 
+/**
+ * Repository interface for auto-detecting local UK council waste timetables from postcodes or council names.
+ */
 interface CouncilLookupRepository {
+    /**
+     * Looks up collection schedule defaults for a UK postcode or council name query.
+     */
     suspend fun lookupPostcode(postcodeOrQuery: String): Result<CouncilScheduleResult>
 }
 
+/**
+ * Implementation of [CouncilLookupRepository] supporting UK postcode lookups and regional fallbacks.
+ * 
+ * Queries postcodes API and maps administrative districts to typical bin collection schedules across UK local authorities on [Dispatchers.IO].
+ */
 class CouncilLookupRepositoryImpl(
     private val service: CouncilLookupService = CouncilLookupServiceImpl()
 ) : CouncilLookupRepository {
 
-    override suspend fun lookupPostcode(postcodeOrQuery: String): Result<CouncilScheduleResult> {
+    /**
+     * Resolves local council timetable defaults by inspecting postcode lookup results or matching known council names safely on [Dispatchers.IO].
+     */
+    override suspend fun lookupPostcode(postcodeOrQuery: String): Result<CouncilScheduleResult> = withContext(Dispatchers.IO) {
         val trimmed = postcodeOrQuery.trim()
         if (trimmed.isBlank()) {
-            return Result.failure(IllegalArgumentException("Postcode cannot be blank."))
+            return@withContext Result.failure(IllegalArgumentException("Postcode cannot be blank."))
         }
 
         val sanitizedPostcode = postcodeOrQuery.replace("\\s+".toRegex(), "").trim().uppercase()
 
-        // Try API lookup via postcodes.io
-        val dto = service.lookupPostcode(sanitizedPostcode)
-        if (dto != null) {
-            val schedule = resolveCouncilSchedule(dto)
-            return Result.success(schedule)
-        }
+        runCatching {
+            // Try API lookup via postcodes.io
+            val dto = service.lookupPostcode(sanitizedPostcode)
+            if (dto != null) {
+                return@runCatching resolveCouncilSchedule(dto)
+            }
 
-        // Fallback: Check if query matches known council names or keywords directly
-        val directMatch = resolveDirectCouncilNameMatch(trimmed)
-        if (directMatch != null) {
-            return Result.success(directMatch)
-        }
+            // Fallback: Check if query matches known council names or keywords directly
+            val directMatch = resolveDirectCouncilNameMatch(trimmed)
+            if (directMatch != null) {
+                return@runCatching directMatch
+            }
 
-        return Result.failure(Exception("Could not auto-detect timetable for: $postcodeOrQuery"))
+            throw Exception("Could not auto-detect timetable for: $postcodeOrQuery")
+        }
     }
 
     private fun resolveCouncilSchedule(dto: PostcodeLookupDto): CouncilScheduleResult {
@@ -46,7 +63,7 @@ class CouncilLookupRepositoryImpl(
         val admin = dto.adminDistrict.trim()
         val reg = dto.region?.trim() ?: ""
 
-        // Normalize admin string for matching
+        // Normalise admin string for matching
         val lowerAdmin = admin.lowercase()
 
         return when {

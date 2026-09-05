@@ -10,6 +10,7 @@ import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.data.repository.CouncilLookupRepository
 import com.example.binminder.data.repository.CouncilLookupRepositoryImpl
+import com.example.binminder.domain.LookupCouncilScheduleUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,9 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalTime
 
+/**
+ * UI state holding setup wizard progress, detected timetable results, and bin configuration parameters.
+ */
 data class OnboardingUiState(
     val currentStep: Int = 1,
     val postcodeOrCouncil: String = "",
@@ -34,6 +38,9 @@ data class OnboardingUiState(
     val userMessage: String? = null
 )
 
+/**
+ * Returns standard default bin configurations for initial setup.
+ */
 fun defaultBinSetups(): List<OnboardingBinSetup> = listOf(
     OnboardingBinSetup(
         binType = "General Waste",
@@ -73,14 +80,27 @@ fun defaultBinSetups(): List<OnboardingBinSetup> = listOf(
     )
 )
 
+/**
+ * ViewModel managing postcode search, timetable auto-detection, and setup wizard steps.
+ *
+ * Uses domain use case [LookupCouncilScheduleUseCase] for council schedule auto-completion.
+ */
 class OnboardingViewModel(
     private val repository: BinRepository,
-    private val councilLookupRepository: CouncilLookupRepository = CouncilLookupRepositoryImpl()
+    private val councilLookupRepository: CouncilLookupRepository = CouncilLookupRepositoryImpl(),
+    private val lookupCouncilScheduleUseCase: LookupCouncilScheduleUseCase = LookupCouncilScheduleUseCase(councilLookupRepository)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
+
+    /**
+     * Observable state flow for onboarding wizard UI.
+     */
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
+    /**
+     * Updates the postcode or council search input string.
+     */
     fun setPostcodeOrCouncil(query: String) {
         _uiState.update { state ->
             val updatedSchedule = if (state.detectedSchedule != null &&
@@ -96,6 +116,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Performs a postcode lookup to auto-detect local council collection schedules via [LookupCouncilScheduleUseCase].
+     */
     fun searchPostcodeTimetable() {
         val query = _uiState.value.postcodeOrCouncil.trim()
         if (query.isBlank()) return
@@ -103,7 +126,7 @@ class OnboardingViewModel(
         _uiState.update { it.copy(isSearchingPostcode = true, searchError = null) }
 
         viewModelScope.launch {
-            val result = councilLookupRepository.lookupPostcode(query)
+            val result = lookupCouncilScheduleUseCase(query)
             if (result.isSuccess) {
                 val schedule = result.getOrNull()!!
                 _uiState.update { state ->
@@ -128,19 +151,31 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Accepts detected council schedule options and completes onboarding immediately.
+     */
     fun acceptAndApplyDetectedTimetable(onComplete: () -> Unit) {
         completeSetup(onComplete)
     }
 
+    /**
+     * Advances to bin customisation steps to adjust auto-detected defaults.
+     */
     fun customiseDetectedTimetable() {
         nextStep()
     }
 
+    /**
+     * Continues into guided setup wizard if auto-detection fails.
+     */
     fun continueToGuidedSetup() {
         _uiState.update { it.copy(searchError = null) }
         nextStep()
     }
 
+    /**
+     * Sets the primary weekly collection day.
+     */
     fun setPrimaryCollectionDay(day: DayOfWeek) {
         _uiState.update { state ->
             val updatedSchedule = state.detectedSchedule?.copy(primaryCollectionDay = day)
@@ -151,6 +186,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Toggles whether a specific bin type is enabled during setup.
+     */
     fun toggleBinEnabled(binType: String) {
         _uiState.update { state ->
             val updated = state.binSetups.map { setup ->
@@ -160,6 +198,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Updates recurrence frequency for a specific bin setup.
+     */
     fun setBinRecurrence(binType: String, recurrence: RecurrenceType) {
         _uiState.update { state ->
             val updated = state.binSetups.map { setup ->
@@ -169,6 +210,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Configures whether a fortnightly bin collection starts on the upcoming week or next week.
+     */
     fun setBinStartNextWeek(binType: String, startNextWeek: Boolean) {
         _uiState.update { state ->
             val updated = state.binSetups.map { setup ->
@@ -178,6 +222,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Updates the chosen colour preset for a specific bin setup.
+     */
     fun setBinColor(binType: String, color: BinColor) {
         _uiState.update { state ->
             val updated = state.binSetups.map { setup ->
@@ -187,6 +234,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Specifies which fortnightly bin is due on the immediate upcoming collection day.
+     */
     fun setFortnightlyThisWeekBin(selectedBinType: String) {
         _uiState.update { state ->
             val targetBin = state.binSetups.find { it.binType == selectedBinType }
@@ -209,6 +259,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Updates reminder notification timing and enabled state during setup.
+     */
     fun setReminderSettings(time: LocalTime, eveningBefore: Boolean, enabled: Boolean) {
         _uiState.update { state ->
             state.copy(
@@ -219,24 +272,36 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Advances to the next step in the setup wizard.
+     */
     fun nextStep() {
         _uiState.update { state ->
             if (state.currentStep < 4) state.copy(currentStep = state.currentStep + 1) else state
         }
     }
 
+    /**
+     * Returns to the previous step in the setup wizard.
+     */
     fun previousStep() {
         _uiState.update { state ->
             if (state.currentStep > 1) state.copy(currentStep = state.currentStep - 1) else state
         }
     }
 
+    /**
+     * Navigates directly to a specific step index in the setup wizard.
+     */
     fun goToStep(step: Int) {
         if (step in 1..4) {
             _uiState.update { it.copy(currentStep = step) }
         }
     }
 
+    /**
+     * Finalises onboarding choices, populates initial database bins, and schedules notifications.
+     */
     fun completeSetup(onComplete: () -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCompleting = true) }
@@ -259,6 +324,9 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Clears current user message notification string.
+     */
     fun dismissUserMessage() {
         _uiState.update { it.copy(userMessage = null) }
     }

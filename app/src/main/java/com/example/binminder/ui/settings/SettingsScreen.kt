@@ -75,6 +75,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Screen composable for managing app theme options, notification schedules, and bank holiday previews.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -157,6 +160,9 @@ fun SettingsScreen(
     )
 }
 
+/**
+ * Structural layout for the application settings screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsContent(
@@ -619,7 +625,7 @@ fun SettingsContent(
         }
     }
 
-    // Reset Timetable Confirmation Dialog
+    // Reset Timetable Confirmation Dialogue
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
@@ -665,7 +671,7 @@ fun SettingsContent(
         )
     }
 
-    // Custom Time Picker Dialog
+    // Custom Time Picker Dialogue
     if (showTimePickerDialog) {
         val timePickerState = rememberTimePickerState(
             initialHour = settings.reminderTime.hour,
@@ -709,6 +715,9 @@ fun SettingsContent(
     }
 }
 
+/**
+ * Jetpack Compose preview function for the settings screen.
+ */
 @Preview(showBackground = true)
 @Composable
 fun SettingsScreenPreview() {

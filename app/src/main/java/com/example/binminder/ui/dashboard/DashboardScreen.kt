@@ -74,6 +74,9 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
+/**
+ * Main dashboard screen composable displaying upcoming UK bin collections and timetable cards.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -104,6 +107,9 @@ fun DashboardScreen(
     )
 }
 
+/**
+ * Structural layout for the main dashboard screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardContent(
@@ -213,6 +219,9 @@ fun DashboardContent(
     }
 }
 
+/**
+ * Featured hero card displaying the immediate next bin collection date and interactive items.
+ */
 @Composable
 fun NextCollectionHeroCard(
     nextDate: LocalDate,
@@ -317,6 +326,9 @@ fun NextCollectionHeroCard(
     }
 }
 
+/**
+ * Explanatory banner notifying users when a collection date has been moved due to a UK bank holiday.
+ */
 @Composable
 fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
     val adjustedEvent = events.firstOrNull { it.isBankHolidayAdjusted }
@@ -363,6 +375,9 @@ fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
     }
 }
 
+/**
+ * Interactive bin item card embedded inside the next collection hero section.
+ */
 @Composable
 fun HeroBinItemCard(
     event: CollectionEvent,
@@ -480,6 +495,9 @@ fun HeroBinItemCard(
     }
 }
 
+/**
+ * Timetable section representing collections due on a future date.
+ */
 @Composable
 fun UpcomingDateSection(
     date: LocalDate,
@@ -519,6 +537,9 @@ fun UpcomingDateSection(
     }
 }
 
+/**
+ * Compact card composable displaying a future collection event.
+ */
 @Composable
 fun UpcomingEventCard(
     event: CollectionEvent,
@@ -539,7 +560,7 @@ fun UpcomingEventCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left color strip / circle
+            // Left colour strip / circle
             Box(
                 modifier = Modifier
                     .size(32.dp)
@@ -601,6 +622,9 @@ fun UpcomingEventCard(
     }
 }
 
+/**
+ * Placeholder view displayed when no active bins or collection schedules exist.
+ */
 @Composable
 fun EmptyScheduleView(
     onAddBinClicked: () -> Unit,
@@ -656,6 +680,9 @@ fun EmptyScheduleView(
     }
 }
 
+/**
+ * Jetpack Compose preview function for the dashboard screen.
+ */
 @Preview(showBackground = true)
 @Composable
 fun DashboardScreenPreview() {

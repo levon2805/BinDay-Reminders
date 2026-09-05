@@ -7,7 +7,7 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 /**
- * Data class representing an official UK Bank Holiday.
+ * Data class holding information about an official UK Bank Holiday.
  */
 data class BankHolidayInfo(
     val name: String,
@@ -28,7 +28,7 @@ data class BankHolidayShiftPreview(
 )
 
 /**
- * Calculator for official UK Bank Holidays (England & Wales) and schedule adjustment rules.
+ * Calculator object for official UK Bank Holidays in England and Wales and schedule adjustment rules.
  */
 object BankHolidayCalculator {
 
@@ -54,7 +54,7 @@ object BankHolidayCalculator {
     }
 
     /**
-     * Returns named list of official UK Bank Holidays (England & Wales) for the specified year.
+     * Returns a named list of official UK Bank Holidays in England and Wales for the specified year.
      */
     fun getNamedBankHolidaysForYear(year: Int): List<BankHolidayInfo> {
         val list = mutableListOf<BankHolidayInfo>()
@@ -117,14 +117,14 @@ object BankHolidayCalculator {
     }
 
     /**
-     * Returns the list of official UK Bank Holidays for the specified year.
+     * Returns the list of official UK Bank Holiday dates for the specified year.
      */
     fun getBankHolidaysForYear(year: Int): List<LocalDate> {
         return getNamedBankHolidaysForYear(year).map { it.date }
     }
 
     /**
-     * Returns the next [limit] upcoming bank holidays from [fromDate].
+     * Returns the next upcoming bank holidays starting from the provided date.
      */
     fun getNextUpcomingBankHolidays(fromDate: LocalDate = LocalDate.now(), limit: Int = 6): List<BankHolidayInfo> {
         val thisYear = getNamedBankHolidaysForYear(fromDate.year)
@@ -135,7 +135,7 @@ object BankHolidayCalculator {
     }
 
     /**
-     * Checks if a given date is a UK bank holiday.
+     * Checks whether a given date is an official UK bank holiday.
      */
     fun isBankHoliday(date: LocalDate): Boolean {
         val holidays = getBankHolidaysForYear(date.year)
@@ -143,7 +143,7 @@ object BankHolidayCalculator {
     }
 
     /**
-     * Returns all bank holidays in the ISO week (Monday to Sunday) containing [date].
+     * Finds all bank holiday dates occurring in the ISO week containing the specified date.
      */
     fun getBankHolidaysInWeek(date: LocalDate): List<LocalDate> {
         val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -156,13 +156,9 @@ object BankHolidayCalculator {
     }
 
     /**
-     * Adjusts a scheduled collection date if a bank holiday occurs in the same week
-     * on or before the scheduled collection date.
+     * Shifts a collection date by one day if a bank holiday occurs earlier in that same week.
      *
-     * Rules: If a collection date falls on or after a bank holiday in that week,
-     * shift collection date by +1 day (e.g. Friday collection moves to Saturday).
-     *
-     * @return Pair containing the adjusted date and a boolean indicating if it was adjusted.
+     * @return A pair containing the updated collection date and a flag indicating whether it was shifted.
      */
     fun adjustForBankHoliday(scheduledDate: LocalDate): Pair<LocalDate, Boolean> {
         val bankHolidaysInWeek = getBankHolidaysInWeek(scheduledDate)
@@ -172,7 +168,7 @@ object BankHolidayCalculator {
 
         val earliestBankHoliday = bankHolidaysInWeek.first()
         if (!scheduledDate.isBefore(earliestBankHoliday)) {
-            // Scheduled collection falls on or after the bank holiday in that week -> shift +1 day
+            // Scheduled collection falls on or after the bank holiday in that week: shift +1 day
             return Pair(scheduledDate.plusDays(1), true)
         }
 

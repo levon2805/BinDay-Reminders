@@ -10,10 +10,16 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
+/**
+ * Object responsible for scheduling and cancelling periodic WorkManager jobs for bin reminders.
+ */
 object NotificationScheduler {
 
     const val WORK_NAME = "binminder_daily_reminder_work"
 
+    /**
+     * Schedules or updates the daily background WorkManager task according to user preferences.
+     */
     fun scheduleDailyReminder(context: Context, settings: NotificationSettings) {
         try {
             val workManager = WorkManager.getInstance(context)
@@ -43,10 +49,13 @@ object NotificationScheduler {
                 workRequest
             )
         } catch (_: Exception) {
-            // Safe fallback for unit tests or uninitialized WorkManager context
+            // Safe fallback for unit tests or uninitialised WorkManager context
         }
     }
 
+    /**
+     * Sends an immediate test notification to confirm reminder configuration.
+     */
     fun sendImmediateTestNotification(context: Context) {
         try {
             NotificationHelper.postCollectionReminderNotification(
@@ -58,11 +67,14 @@ object NotificationScheduler {
         } catch (_: Exception) {}
     }
 
+    /**
+     * Cancels any active periodic reminder task.
+     */
     fun cancelReminder(context: Context) {
         try {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         } catch (_: Exception) {
-            // Safe fallback for unit tests or uninitialized WorkManager context
+            // Safe fallback for unit tests or uninitialised WorkManager context
         }
     }
 }

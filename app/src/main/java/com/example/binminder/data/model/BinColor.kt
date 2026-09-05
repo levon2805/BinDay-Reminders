@@ -1,7 +1,9 @@
 package com.example.binminder.data.model
 
 /**
- * Common preset colours for UK wheelie bins and recycling containers.
+ * Preset colours commonly used for UK wheelie bins and recycling containers.
+ * 
+ * Provides display names and default hex values to make bin selection intuitive.
  */
 enum class BinColor(
     val displayName: String,
@@ -19,6 +21,9 @@ enum class BinColor(
     CUSTOM("Custom", "#009688", 0xFF009688);
 
     companion object {
+        /**
+         * Safely finds a matching bin colour by its string name, defaulting to black if unmatched.
+         */
         fun fromName(name: String): BinColor {
             return entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: BLACK
         }

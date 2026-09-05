@@ -15,12 +15,18 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.binminder.MainActivity
 
+/**
+ * Helper object for building and posting bin collection system notifications.
+ */
 object NotificationHelper {
 
     const val CHANNEL_ID = "bin_collection_reminders"
     private const val CHANNEL_NAME = "Bin Collection Reminders"
     private const val CHANNEL_DESCRIPTION = "Notifications for upcoming bin collection schedules"
 
+    /**
+     * Creates the Android notification channel required for collection reminders.
+     */
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -38,6 +44,9 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Posts a bin collection reminder notification to the Android system tray.
+     */
     @SuppressLint("MissingPermission")
     fun postCollectionReminderNotification(
         context: Context,

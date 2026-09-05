@@ -41,6 +41,9 @@ private val LightColorScheme = lightColorScheme(
     onTertiaryContainer = GoldOnTertiaryContainerLight
 )
 
+/**
+ * Custom Material 3 theme wrapper for BinMinder supporting dynamic colours on Android 12+.
+ */
 @Composable
 fun BinMinderTheme(
     themeMode: AppThemeMode = AppThemeMode.SYSTEM,
@@ -49,7 +52,7 @@ fun BinMinderTheme(
         AppThemeMode.DARK -> true
         AppThemeMode.SYSTEM -> isSystemInDarkTheme()
     },
-    // Dynamic color is available on Android 12+
+    // Dynamic colour is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

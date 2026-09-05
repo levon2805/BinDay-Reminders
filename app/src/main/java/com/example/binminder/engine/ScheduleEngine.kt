@@ -12,8 +12,8 @@ import java.time.temporal.ChronoUnit
 object ScheduleEngine {
 
     /**
-     * Generates a sorted list of upcoming [CollectionEvent] items for all enabled bins
-     * within the date range [startDate] to [endDate] inclusive.
+     * Generates a sorted list of upcoming collection events for all enabled bins
+     * within the specified date range inclusive.
      */
     fun generateCollectionEvents(
         bins: List<Bin>,
@@ -29,7 +29,7 @@ object ScheduleEngine {
     }
 
     /**
-     * Generates upcoming collection events for a single bin within [startDate] to [endDate].
+     * Generates upcoming collection events for a single bin within the specified date range.
      */
     fun generateEventsForBin(
         bin: Bin,

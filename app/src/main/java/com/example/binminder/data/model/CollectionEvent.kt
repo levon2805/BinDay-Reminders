@@ -4,6 +4,9 @@ import java.time.LocalDate
 
 /**
  * Data model representing a specific bin collection occurrence on a calculated date.
+ * 
+ * Contains details about which bin is due, its display colour, the date it is due out,
+ * and whether the collection date was moved due to a public bank holiday.
  */
 data class CollectionEvent(
     val binId: Long,

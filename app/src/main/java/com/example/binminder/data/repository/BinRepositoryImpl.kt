@@ -13,13 +13,22 @@ import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.engine.ScheduleEngine
 import com.example.binminder.worker.NotificationScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
+/**
+ * Concrete implementation of [BinRepository] coordinating Room database and DataStore settings.
+ * 
+ * Ensures all I/O calls execute safely on [Dispatchers.IO] with robust error handling.
+ * Proper grand data layer logic to keep your wheelie bin details saved tidy and fast!
+ */
 class BinRepositoryImpl(
     private val binDao: BinDao,
     private val notificationSettingsDataStore: NotificationSettingsDataStore,
@@ -28,49 +37,82 @@ class BinRepositoryImpl(
 
     private val applicationContext = context.applicationContext
 
-    private suspend fun triggerScheduleUpdate() {
-        val settings = notificationSettingsDataStore.notificationSettings.first()
-        NotificationScheduler.scheduleDailyReminder(applicationContext, settings)
+    private suspend fun triggerScheduleUpdate() = withContext(Dispatchers.IO) {
+        runCatching {
+            val settings = notificationSettingsDataStore.notificationSettings.first()
+            NotificationScheduler.scheduleDailyReminder(applicationContext, settings)
+        }
     }
 
+    /**
+     * Observes all bins from local database as a reactive flow on [Dispatchers.IO].
+     */
     override val allBins: Flow<List<Bin>> = binDao.getAllBins().map { entities ->
         entities.map { it.toDomain() }
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * Retrieves a direct snapshot list of all saved bins safely on [Dispatchers.IO].
+     */
+    override suspend fun getBinsList(): List<Bin> = withContext(Dispatchers.IO) {
+        runCatching {
+            binDao.getAllBinsList().map { it.toDomain() }
+        }.getOrDefault(emptyList())
     }
 
-    override suspend fun getBinsList(): List<Bin> {
-        return binDao.getAllBinsList().map { it.toDomain() }
+    /**
+     * Observes a specific bin by ID as a reactive flow on [Dispatchers.IO].
+     */
+    override fun getBin(id: Long): Flow<Bin?> = binDao.getBinById(id).map {
+        it?.toDomain()
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * Fetches a specific bin by ID synchronously on [Dispatchers.IO].
+     */
+    override suspend fun getBinSync(id: Long): Bin? = withContext(Dispatchers.IO) {
+        runCatching {
+            binDao.getBinByIdSync(id)?.toDomain()
+        }.getOrNull()
     }
 
-    override fun getBin(id: Long): Flow<Bin?> {
-        return binDao.getBinById(id).map { it?.toDomain() }
-    }
-
-    override suspend fun getBinSync(id: Long): Bin? {
-        return binDao.getBinByIdSync(id)?.toDomain()
-    }
-
-    override suspend fun insertBin(bin: Bin): Long {
+    /**
+     * Saves a new bin and triggers background reminder updates on [Dispatchers.IO].
+     */
+    override suspend fun insertBin(bin: Bin): Long = withContext(Dispatchers.IO) {
         val id = binDao.insertBin(BinEntity.fromDomain(bin))
         triggerScheduleUpdate()
-        return id
+        id
     }
 
-    override suspend fun updateBin(bin: Bin) {
+    /**
+     * Updates an existing bin and triggers background reminder updates on [Dispatchers.IO].
+     */
+    override suspend fun updateBin(bin: Bin): Unit = withContext(Dispatchers.IO) {
         binDao.updateBin(BinEntity.fromDomain(bin))
         triggerScheduleUpdate()
     }
 
-    override suspend fun deleteBin(bin: Bin) {
+    /**
+     * Deletes a bin and triggers background reminder updates on [Dispatchers.IO].
+     */
+    override suspend fun deleteBin(bin: Bin): Unit = withContext(Dispatchers.IO) {
         binDao.deleteBin(BinEntity.fromDomain(bin))
         triggerScheduleUpdate()
     }
 
-    override suspend fun clearAllBins() {
+    /**
+     * Clears all saved bins and updates scheduled notifications on [Dispatchers.IO].
+     */
+    override suspend fun clearAllBins(): Unit = withContext(Dispatchers.IO) {
         binDao.deleteAllBins()
         triggerScheduleUpdate()
     }
 
-    override suspend fun ensureDefaultBinsInitialized() {
+    /**
+     * Populates sensible default UK bin choices if local storage is empty on [Dispatchers.IO].
+     */
+    override suspend fun ensureDefaultBinsInitialized(): Unit = withContext(Dispatchers.IO) {
         if (binDao.getBinCount() == 0) {
             val today = LocalDate.now()
             val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -123,34 +165,55 @@ class BinRepositoryImpl(
         }
     }
 
+    /**
+     * Observes notification preference changes as a flow on [Dispatchers.IO].
+     */
     override val notificationSettings: Flow<NotificationSettings> =
-        notificationSettingsDataStore.notificationSettings
+        notificationSettingsDataStore.notificationSettings.flowOn(Dispatchers.IO)
 
-    override suspend fun updateNotificationSettings(settings: NotificationSettings) {
+    /**
+     * Saves updated notification preferences and reschedules background reminders on [Dispatchers.IO].
+     */
+    override suspend fun updateNotificationSettings(settings: NotificationSettings): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.updateSettings(settings)
         NotificationScheduler.scheduleDailyReminder(applicationContext, settings)
     }
 
+    /**
+     * Observes active theme choices as a flow on [Dispatchers.IO].
+     */
     override val themeMode: Flow<AppThemeMode> =
-        notificationSettingsDataStore.themeMode
+        notificationSettingsDataStore.themeMode.flowOn(Dispatchers.IO)
 
-    override suspend fun setThemeMode(themeMode: AppThemeMode) {
+    /**
+     * Saves the chosen app theme option on [Dispatchers.IO].
+     */
+    override suspend fun setThemeMode(themeMode: AppThemeMode): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setThemeMode(themeMode)
     }
 
+    /**
+     * Observes onboarding completion status on [Dispatchers.IO].
+     */
     override val onboardingCompleted: Flow<Boolean> =
-        notificationSettingsDataStore.onboardingCompleted
+        notificationSettingsDataStore.onboardingCompleted.flowOn(Dispatchers.IO)
 
-    override suspend fun setOnboardingCompleted(completed: Boolean) {
+    /**
+     * Sets whether setup onboarding is completed on [Dispatchers.IO].
+     */
+    override suspend fun setOnboardingCompleted(completed: Boolean): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setOnboardingCompleted(completed)
     }
 
+    /**
+     * Configures initial bins and preferences based on user choices during onboarding on [Dispatchers.IO].
+     */
     override suspend fun completeOnboardingSetup(
         postcodeOrCouncil: String,
         primaryDay: DayOfWeek,
         binSetups: List<OnboardingBinSetup>,
         notificationSettings: NotificationSettings
-    ) {
+    ): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.saveOnboardingInfo(postcodeOrCouncil, primaryDay.name)
 
         binDao.deleteAllBins()
@@ -185,12 +248,15 @@ class BinRepositoryImpl(
         setOnboardingCompleted(true)
     }
 
+    /**
+     * Calculates future collection dates across active bins within a date range on [Dispatchers.IO].
+     */
     override fun getUpcomingCollectionEvents(
         startDate: LocalDate,
         endDate: LocalDate
     ): Flow<List<CollectionEvent>> {
         return allBins.map { bins ->
             ScheduleEngine.generateCollectionEvents(bins, startDate, endDate)
-        }
+        }.flowOn(Dispatchers.IO)
     }
 }

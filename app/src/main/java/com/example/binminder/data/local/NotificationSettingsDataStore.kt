@@ -16,6 +16,11 @@ import java.time.LocalTime
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "notification_settings")
 
+/**
+ * DataStore manager for persistent user preferences and application state.
+ * 
+ * Handles notification settings, theme preferences, onboarding state, and council location info.
+ */
 class NotificationSettingsDataStore(context: Context) {
 
     private val applicationContext = context.applicationContext
@@ -31,6 +36,9 @@ class NotificationSettingsDataStore(context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
+    /**
+     * Observes current notification settings including reminder time and theme mode.
+     */
     val notificationSettings: Flow<NotificationSettings> = applicationContext.dataStore.data.map { prefs ->
         val enabled = prefs[Keys.REMINDER_ENABLED] ?: true
         val hour = prefs[Keys.REMINDER_HOUR] ?: 19
@@ -47,35 +55,56 @@ class NotificationSettingsDataStore(context: Context) {
         )
     }
 
+    /**
+     * Observes the active app theme mode setting.
+     */
     val themeMode: Flow<AppThemeMode> = applicationContext.dataStore.data.map { prefs ->
         val raw = prefs[Keys.THEME_MODE]
         raw?.let { runCatching { AppThemeMode.valueOf(it) }.getOrNull() } ?: AppThemeMode.SYSTEM
     }
 
+    /**
+     * Observes whether the first-time setup onboarding flow has been completed.
+     */
     val onboardingCompleted: Flow<Boolean> = applicationContext.dataStore.data.map { prefs ->
         prefs[Keys.ONBOARDING_COMPLETED] ?: false
     }
 
+    /**
+     * Observes saved postcode or council name information.
+     */
     val postcodeOrCouncil: Flow<String> = applicationContext.dataStore.data.map { prefs ->
         prefs[Keys.POSTCODE_OR_COUNCIL] ?: ""
     }
 
+    /**
+     * Observes the primary weekly collection day preference.
+     */
     val primaryCollectionDay: Flow<String> = applicationContext.dataStore.data.map { prefs ->
         prefs[Keys.PRIMARY_COLLECTION_DAY] ?: "MONDAY"
     }
 
+    /**
+     * Updates the saved theme preference option.
+     */
     suspend fun setThemeMode(themeMode: AppThemeMode) {
         applicationContext.dataStore.edit { prefs ->
             prefs[Keys.THEME_MODE] = themeMode.name
         }
     }
 
+    /**
+     * Updates the onboarding completion status flag.
+     */
     suspend fun setOnboardingCompleted(completed: Boolean) {
         applicationContext.dataStore.edit { prefs ->
             prefs[Keys.ONBOARDING_COMPLETED] = completed
         }
     }
 
+    /**
+     * Saves user council and postcode preferences gathered during onboarding.
+     */
     suspend fun saveOnboardingInfo(postcodeOrCouncil: String, primaryDay: String) {
         applicationContext.dataStore.edit { prefs ->
             prefs[Keys.POSTCODE_OR_COUNCIL] = postcodeOrCouncil
@@ -83,6 +112,9 @@ class NotificationSettingsDataStore(context: Context) {
         }
     }
 
+    /**
+     * Updates notification settings including reminder schedule and theme choices.
+     */
     suspend fun updateSettings(settings: NotificationSettings) {
         applicationContext.dataStore.edit { prefs ->
             prefs[Keys.REMINDER_ENABLED] = settings.reminderEnabled

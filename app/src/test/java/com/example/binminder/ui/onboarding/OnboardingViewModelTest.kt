@@ -185,7 +185,7 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun testSetBinColorCustomization() {
+    fun testSetBinColorCustomisation() {
         viewModel.setBinColor("Garden Waste", BinColor.PURPLE)
         val gardenBin = viewModel.uiState.value.binSetups.first { it.binType == "Garden Waste" }
         assertEquals(BinColor.PURPLE, gardenBin.presetColor)

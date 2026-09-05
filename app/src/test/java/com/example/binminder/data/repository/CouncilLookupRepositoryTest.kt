@@ -45,7 +45,7 @@ class CouncilLookupRepositoryTest {
         assertTrue(binColors.contains(BinColor.BROWN))
         assertTrue(binColors.contains(BinColor.GREEN))
 
-        // Verify clean bin names without color suffixes in brackets
+        // Verify clean bin names without colour suffixes in brackets
         schedule.binSetups.forEach { bin ->
             assertFalse("Bin display name '${bin.displayName}' should not contain '('", bin.displayName.contains("("))
         }

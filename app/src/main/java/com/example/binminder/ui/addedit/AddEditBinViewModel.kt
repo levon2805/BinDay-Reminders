@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * UI state holding form input field values and validation status for adding or editing a bin.
+ */
 data class AddEditBinUiState(
     val binId: Long? = null,
     val name: String = "",
@@ -28,13 +31,23 @@ data class AddEditBinUiState(
     val errorMessage: String? = null
 )
 
+/**
+ * ViewModel managing form input fields, validation, and database updates for wheelie bins.
+ */
 class AddEditBinViewModel(
     private val repository: BinRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditBinUiState())
+
+    /**
+     * Observable state flow for the bin form UI.
+     */
     val uiState: StateFlow<AddEditBinUiState> = _uiState.asStateFlow()
 
+    /**
+     * Loads existing bin properties for editing or resets fields for creating a new bin.
+     */
     fun loadBin(id: Long?) {
         if (id == null || id == 0L) {
             _uiState.value = AddEditBinUiState()
@@ -68,10 +81,16 @@ class AddEditBinViewModel(
         }
     }
 
+    /**
+     * Updates the name input field in state.
+     */
     fun onNameChange(name: String) {
         _uiState.value = _uiState.value.copy(name = name, errorMessage = null)
     }
 
+    /**
+     * Updates the selected preset bin colour.
+     */
     fun onPresetColorSelected(preset: BinColor) {
         val hex = if (preset == BinColor.CUSTOM) {
             _uiState.value.colorHex
@@ -85,6 +104,9 @@ class AddEditBinViewModel(
         )
     }
 
+    /**
+     * Updates custom hex colour input in state.
+     */
     fun onCustomHexChange(hex: String) {
         _uiState.value = _uiState.value.copy(
             colorHex = hex,
@@ -93,22 +115,37 @@ class AddEditBinViewModel(
         )
     }
 
+    /**
+     * Updates the selected collection recurrence frequency.
+     */
     fun onRecurrenceSelected(type: RecurrenceType) {
         _uiState.value = _uiState.value.copy(recurrence = type)
     }
 
+    /**
+     * Updates the starting collection date in state.
+     */
     fun onStartDateSelected(date: LocalDate) {
         _uiState.value = _uiState.value.copy(startDate = date)
     }
 
+    /**
+     * Updates the bank holiday adjustment preference toggle.
+     */
     fun onAdjustForBankHolidaysChange(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(adjustForBankHolidays = enabled)
     }
 
+    /**
+     * Updates kerbside notes or instructions in state.
+     */
     fun onCustomNoteChange(note: String) {
         _uiState.value = _uiState.value.copy(customNote = note)
     }
 
+    /**
+     * Validates and persists bin details to local storage.
+     */
     fun saveBin() {
         val state = _uiState.value
         if (state.name.isBlank()) {
@@ -145,6 +182,9 @@ class AddEditBinViewModel(
         }
     }
 
+    /**
+     * Clears current error message notification string.
+     */
     fun clearErrorMessage() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }

@@ -2,6 +2,8 @@ package com.example.binminder.data.model
 
 /**
  * Defines collection schedule recurrence intervals for UK bin collections.
+ * 
+ * Specifies how frequently collections repeat, such as weekly or fortnightly.
  */
 enum class RecurrenceType(
     val displayName: String,
@@ -13,6 +15,9 @@ enum class RecurrenceType(
     EVERY_4_WEEKS("Every 4 Weeks", 4);
 
     companion object {
+        /**
+         * Safely resolves a recurrence type from its string representation, defaulting to fortnightly.
+         */
         fun fromName(name: String): RecurrenceType {
             return entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: FORTNIGHTLY
         }

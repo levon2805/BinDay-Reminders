@@ -10,11 +10,17 @@ import com.example.binminder.engine.ScheduleEngine
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
+/**
+ * Background WorkManager worker that checks for upcoming bin collections and triggers notifications.
+ */
 class NotificationWorker(
     private val appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    /**
+     * Executes background collection checks and triggers reminders when bins are due.
+     */
     override suspend fun doWork(): Result {
         val database = AppDatabase.getInstance(appContext)
         val dataStore = NotificationSettingsDataStore(appContext)

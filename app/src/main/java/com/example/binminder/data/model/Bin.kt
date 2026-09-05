@@ -4,6 +4,9 @@ import java.time.LocalDate
 
 /**
  * Data model representing a UK household wheelie bin or collection container.
+ * 
+ * Holds information about the bin name, chosen colour, collection recurrence pattern,
+ * start date, and whether collections automatically shift for bank holidays.
  */
 data class Bin(
     val id: Long = 0,

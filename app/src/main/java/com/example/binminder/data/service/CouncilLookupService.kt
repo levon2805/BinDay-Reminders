@@ -8,6 +8,9 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
+/**
+ * Data transfer object holding administrative boundary details returned from UK postcode lookup services.
+ */
 data class PostcodeLookupDto(
     val postcode: String,
     val adminDistrict: String,
@@ -17,10 +20,19 @@ data class PostcodeLookupDto(
     val incode: String? = null
 )
 
+/**
+ * Service interface for querying UK postcode administrative data.
+ */
 interface CouncilLookupService {
+    /**
+     * Fetches administrative details for a given UK postcode string.
+     */
     suspend fun lookupPostcode(postcode: String): PostcodeLookupDto?
 }
 
+/**
+ * Service implementation querying the postcodes.io public API for UK administrative council data.
+ */
 class CouncilLookupServiceImpl(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -28,6 +40,9 @@ class CouncilLookupServiceImpl(
         .build()
 ) : CouncilLookupService {
 
+    /**
+     * Connects to the postcodes.io API to resolve administrative council details for the specified postcode.
+     */
     override suspend fun lookupPostcode(postcode: String): PostcodeLookupDto? = withContext(Dispatchers.IO) {
         val sanitizedPostcode = postcode.replace("\\s+".toRegex(), "").trim().uppercase()
         if (sanitizedPostcode.isBlank()) return@withContext null

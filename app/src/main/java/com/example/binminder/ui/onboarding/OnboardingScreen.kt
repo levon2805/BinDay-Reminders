@@ -86,6 +86,9 @@ import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 
+/**
+ * Screen composable for the first-time setup onboarding wizard.
+ */
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel,
@@ -116,6 +119,9 @@ fun OnboardingScreen(
     )
 }
 
+/**
+ * Layout structure hosting onboarding wizard progress and steps.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingContent(
@@ -323,9 +329,9 @@ fun OnboardingContent(
     }
 }
 
-// -----------------------------------------------------------------------------
-// STEP 1: Postcode Timetable Search & Auto-Complete
-// -----------------------------------------------------------------------------
+/**
+ * Step 1 composable for UK postcode search and auto-detected schedule options.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Step1LocationContent(
@@ -558,9 +564,7 @@ fun Step1LocationContent(
                         }
                     }
 
-                    // ---------------------------------------------------------
                     // "Which Bin Goes Out THIS Coming Week?" Week-Cycle Toggle
-                    // ---------------------------------------------------------
                     val fortnightlyBins = binSetups.filter { it.isEnabled && it.recurrence == RecurrenceType.FORTNIGHTLY }
                     if (fortnightlyBins.isNotEmpty()) {
                         Surface(
@@ -634,9 +638,7 @@ fun Step1LocationContent(
                         }
                     }
 
-                    // ---------------------------------------------------------
                     // Live Schedule Preview
-                    // ---------------------------------------------------------
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
@@ -700,9 +702,7 @@ fun Step1LocationContent(
                         }
                     }
 
-                    // ---------------------------------------------------------
                     // In-Place Bin Customisation List
-                    // ---------------------------------------------------------
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -823,9 +823,9 @@ fun Step1LocationContent(
     }
 }
 
-// -----------------------------------------------------------------------------
-// Interactive Bin Item on Postcode Result Card
-// -----------------------------------------------------------------------------
+/**
+ * Interactive bin item composable rendered inside the postcode lookup result card.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ResultCardBinItem(
@@ -947,7 +947,7 @@ private fun ResultCardBinItem(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Color Palette Chooser
+                    // Colour Palette Chooser
                     Text(
                         text = "Colour Theme:",
                         style = MaterialTheme.typography.labelMedium,
@@ -1052,6 +1052,9 @@ private fun ResultCardBinItem(
     }
 }
 
+/**
+ * Compact pill tag composable displaying a scheduled bin preview item.
+ */
 @Composable
 private fun SchedulePreviewPill(bin: OnboardingBinSetup) {
     val binBgColor = parseBinColor(bin.presetColor.defaultHex, bin.presetColor)
@@ -1082,9 +1085,9 @@ private fun SchedulePreviewPill(bin: OnboardingBinSetup) {
     }
 }
 
-// -----------------------------------------------------------------------------
-// STEP 2: Primary Collection Day
-// -----------------------------------------------------------------------------
+/**
+ * Step 2 composable for selecting primary collection day.
+ */
 @Composable
 fun Step2CollectionDayContent(
     selectedDay: DayOfWeek,
@@ -1183,9 +1186,9 @@ fun Step2CollectionDayContent(
     }
 }
 
-// -----------------------------------------------------------------------------
-// STEP 3: Select Bins & Schedules
-// -----------------------------------------------------------------------------
+/**
+ * Step 3 composable for selecting bins and collection frequencies.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Step3BinsContent(
@@ -1414,9 +1417,9 @@ fun Step3BinsContent(
     }
 }
 
-// -----------------------------------------------------------------------------
-// STEP 4: Reminder Preferences
-// -----------------------------------------------------------------------------
+/**
+ * Step 4 composable for configuring notification reminders.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Step4RemindersContent(
@@ -1568,6 +1571,9 @@ fun Step4RemindersContent(
     }
 }
 
+/**
+ * Jetpack Compose preview function for the onboarding setup screen.
+ */
 @Preview(showBackground = true)
 @Composable
 fun OnboardingScreenPreview() {

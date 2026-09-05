@@ -8,10 +8,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Utility functions for parsing UK bin colours, calculating contrast,
- * and formatting schedule information in British English.
+ * Parses a hex colour string or preset into a Jetpack Compose [Color].
  */
-
 fun parseBinColor(colorHex: String, presetColor: BinColor): Color {
     return try {
         val cleanHex = colorHex.trim().removePrefix("#")
@@ -26,11 +24,17 @@ fun parseBinColor(colorHex: String, presetColor: BinColor): Color {
     }
 }
 
+/**
+ * Returns either dark or light text colour to ensure readable contrast on top of a background colour.
+ */
 fun getContrastingTextColor(backgroundColor: Color): Color {
     val luminance = 0.299f * backgroundColor.red + 0.587f * backgroundColor.green + 0.114f * backgroundColor.blue
     return if (luminance > 0.55f) Color(0xFF1C1B1F) else Color.White
 }
 
+/**
+ * Formats recurrence frequency and start day into a friendly text string.
+ */
 fun formatRecurrenceLabel(recurrence: RecurrenceType, startDate: LocalDate): String {
     val dayOfWeekName = startDate.dayOfWeek.name.lowercase().replaceFirstChar { it.titlecase(Locale.UK) }
     return when (recurrence) {
@@ -41,11 +45,17 @@ fun formatRecurrenceLabel(recurrence: RecurrenceType, startDate: LocalDate): Str
     }
 }
 
+/**
+ * Formats a date using standard British English date order.
+ */
 fun formatBritishDate(date: LocalDate, includeDayOfWeek: Boolean = true): String {
     val pattern = if (includeDayOfWeek) "EEEE, d MMMM yyyy" else "d MMMM yyyy"
     return date.format(DateTimeFormatter.ofPattern(pattern, Locale.UK))
 }
 
+/**
+ * Returns a human readable relative day label such as TODAY, TOMORROW, or count of days.
+ */
 fun formatRelativeDays(days: Long): String {
     return when (days) {
         0L -> "TODAY"

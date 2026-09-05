@@ -81,6 +81,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+/**
+ * Screen composable for creating or editing a wheelie bin profile.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditBinScreen(
@@ -125,6 +128,9 @@ fun AddEditBinScreen(
     )
 }
 
+/**
+ * Form layout structure for bin details editing.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditBinContent(
@@ -495,6 +501,9 @@ fun AddEditBinContent(
     }
 }
 
+/**
+ * Live card preview showing the current bin name and selected colour swatch.
+ */
 @Composable
 fun BinPreviewHeader(
     name: String,
@@ -552,6 +561,9 @@ fun BinPreviewHeader(
     }
 }
 
+/**
+ * Interactive swatch chip representing a council bin colour preset.
+ */
 @Composable
 fun ColorSwatchChip(
     preset: BinColor,
@@ -596,6 +608,9 @@ fun ColorSwatchChip(
     }
 }
 
+/**
+ * Jetpack Compose preview function for the add/edit wheelie bin screen.
+ */
 @Preview(showBackground = true)
 @Composable
 fun AddEditBinScreenPreview() {

@@ -7,6 +7,11 @@ import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.RecurrenceType
 import java.time.LocalDate
 
+/**
+ * Room database entity representing a household bin in local persistence.
+ * 
+ * Stores bin properties such as name, hex colour code, recurrence pattern, and start date.
+ */
 @Entity(tableName = "bins")
 data class BinEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -20,6 +25,9 @@ data class BinEntity(
     val isEnabled: Boolean,
     val adjustForBankHolidays: Boolean
 ) {
+    /**
+     * Converts this database entity into a domain model bin object.
+     */
     fun toDomain(): Bin {
         return Bin(
             id = id,
@@ -36,6 +44,9 @@ data class BinEntity(
     }
 
     companion object {
+        /**
+         * Creates a database entity from a domain model bin object.
+         */
         fun fromDomain(bin: Bin): BinEntity {
             return BinEntity(
                 id = bin.id,

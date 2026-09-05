@@ -8,12 +8,16 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.example.binminder.data.repository.BinRepository
+import com.example.binminder.di.AppContainer
 import com.example.binminder.ui.addedit.AddEditBinScreen
 import com.example.binminder.ui.addedit.AddEditBinViewModel
 import com.example.binminder.ui.bins.BinListScreen
@@ -21,20 +25,24 @@ import com.example.binminder.ui.bins.BinListViewModel
 import com.example.binminder.ui.dashboard.DashboardScreen
 import com.example.binminder.ui.dashboard.DashboardViewModel
 import com.example.binminder.ui.factory.ViewModelFactory
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import com.example.binminder.ui.onboarding.OnboardingScreen
 import com.example.binminder.ui.onboarding.OnboardingViewModel
 import com.example.binminder.ui.settings.SettingsScreen
 import com.example.binminder.ui.settings.SettingsViewModel
 
+/**
+ * Main scaffold hosting navigation display and bottom navigation bar.
+ * 
+ * Directs users between the timetable dashboard, bin management list, settings,
+ * and the first-time onboarding wizard.
+ */
 @Composable
 fun MainScreen(
-    repository: BinRepository,
+    appContainer: AppContainer,
     modifier: Modifier = Modifier
 ) {
-    val factory = ViewModelFactory(repository)
+    val repository = appContainer.binRepository
+    val factory = remember(appContainer) { ViewModelFactory(appContainer) }
     val backStack = rememberNavBackStack(Screen.Dashboard)
 
     val onboardingCompleted by repository.onboardingCompleted.collectAsState(initial = null)

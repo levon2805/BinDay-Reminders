@@ -7,6 +7,7 @@ import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.data.repository.BinRepository
+import com.example.binminder.domain.ResetTimetableUseCase
 import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
 import com.example.binminder.worker.NotificationScheduler
@@ -23,6 +24,9 @@ import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
+/**
+ * UI state holding notification settings, theme preferences, and bank holiday previews.
+ */
 data class SettingsUiState(
     val notificationSettings: NotificationSettings = NotificationSettings(),
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
@@ -31,11 +35,21 @@ data class SettingsUiState(
     val userMessage: String? = null
 )
 
+/**
+ * ViewModel managing application preferences, notification schedules, theme choices, and bank holiday shift previews.
+ *
+ * Uses domain use case [ResetTimetableUseCase] for resetting timetable configurations.
+ */
 class SettingsViewModel(
-    private val repository: BinRepository
+    private val repository: BinRepository,
+    private val resetTimetableUseCase: ResetTimetableUseCase = ResetTimetableUseCase(repository)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
+
+    /**
+     * Observable flow of the settings UI state.
+     */
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
@@ -67,6 +81,9 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Updates the active theme mode preference.
+     */
     fun setThemeMode(themeMode: AppThemeMode) {
         viewModelScope.launch {
             repository.setThemeMode(themeMode)
@@ -76,6 +93,9 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Enables or disables collection reminder notifications.
+     */
     fun toggleReminders(enabled: Boolean, context: Context) {
         viewModelScope.launch {
             val updated = _uiState.value.notificationSettings.copy(reminderEnabled = enabled)
@@ -85,6 +105,9 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Updates notification time and whether alerts fire the evening before collection.
+     */
     fun updateReminderSchedule(time: LocalTime, eveningBefore: Boolean) {
         viewModelScope.launch {
             val updated = _uiState.value.notificationSettings.copy(
@@ -100,6 +123,9 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Sends an immediate test notification to verify notification setup.
+     */
     fun sendTestNotification(context: Context) {
         NotificationScheduler.sendImmediateTestNotification(context)
         _uiState.value = _uiState.value.copy(
@@ -107,6 +133,9 @@ class SettingsViewModel(
         )
     }
 
+    /**
+     * Restores default UK council bin profiles.
+     */
     fun resetDefaultBins() {
         viewModelScope.launch {
             repository.ensureDefaultBinsInitialized()
@@ -116,11 +145,12 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Clears all saved bins and resets onboarding state to allow entering a new address via [ResetTimetableUseCase].
+     */
     fun resetTimetableAndAddress(context: Context, onComplete: () -> Unit) {
         viewModelScope.launch {
-            repository.clearAllBins()
-            repository.setOnboardingCompleted(false)
-            NotificationScheduler.cancelReminder(context)
+            resetTimetableUseCase(context)
             _uiState.value = _uiState.value.copy(
                 userMessage = "Timetable and address reset."
             )
@@ -128,10 +158,12 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Resets onboarding state and clears bins for setup wizard re-run via [ResetTimetableUseCase].
+     */
     fun resetOnboarding(onComplete: () -> Unit) {
         viewModelScope.launch {
-            repository.clearAllBins()
-            repository.setOnboardingCompleted(false)
+            resetTimetableUseCase()
             _uiState.value = _uiState.value.copy(
                 userMessage = "Resetting setup wizard..."
             )
@@ -139,12 +171,18 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Handles notification permission denial feedback.
+     */
     fun onNotificationPermissionDenied() {
         _uiState.value = _uiState.value.copy(
             userMessage = "Notification permission is required to receive bin reminders."
         )
     }
 
+    /**
+     * Clears current user message notification string.
+     */
     fun dismissUserMessage() {
         _uiState.value = _uiState.value.copy(userMessage = null)
     }

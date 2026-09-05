@@ -2,7 +2,9 @@ package com.example.binminder.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Expressive British Eco-Green Palette for M3 Fallback
+/**
+ * Expressive British Eco-Green colour palette definitions for M3 themes.
+ */
 val GreenPrimaryLight = Color(0xFF006C4C)
 val GreenOnPrimaryLight = Color(0xFFFFFFFF)
 val GreenPrimaryContainerLight = Color(0xFF80F8C2)
