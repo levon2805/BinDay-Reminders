@@ -96,6 +96,25 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun testUpdateReminderScheduleCustomTime() = runTest {
+        val customTime = LocalTime.of(19, 30)
+        viewModel.updateReminderSchedule(customTime, true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(customTime, fakeRepository.notificationSettingsState.reminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.reminderEveningBefore)
+        assertTrue(viewModel.uiState.value.userMessage!!.contains("19:30"))
+
+        val customMorningTime = LocalTime.of(6, 45)
+        viewModel.updateReminderSchedule(customMorningTime, false)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(customMorningTime, fakeRepository.notificationSettingsState.reminderTime)
+        assertFalse(fakeRepository.notificationSettingsState.reminderEveningBefore)
+        assertTrue(viewModel.uiState.value.userMessage!!.contains("06:45"))
+    }
+
+    @Test
     fun testInitialThemeModePreference() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 

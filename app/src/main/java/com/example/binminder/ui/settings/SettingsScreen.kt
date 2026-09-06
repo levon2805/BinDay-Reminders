@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EventRepeat
 import androidx.compose.material.icons.rounded.Info
@@ -178,6 +177,7 @@ fun SettingsContent(
 ) {
     val settings = uiState.notificationSettings
     var showTimePickerDialog by remember { mutableStateOf(false) }
+    var customTimeEveningBefore by remember { mutableStateOf(settings.reminderEveningBefore) }
     var showResetDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -213,78 +213,7 @@ fun SettingsContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Section 1: Theme Preference
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Palette,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Theme Preference",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Text(
-                        text = "App Appearance",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Select your preferred app display theme",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        AppThemeMode.entries.forEach { mode ->
-                            val isSelected = uiState.themeMode == mode
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onSetThemeMode(mode) },
-                                label = { Text(mode.label) },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                } else null,
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Section 2: Notifications & Reminder Schedule
+            // Section 1: Notifications & Reminder Schedule
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -377,6 +306,31 @@ fun SettingsContent(
                                     )
                                 )
                             }
+
+                            val isEveningCustom = settings.reminderEveningBefore && settings.reminderTime !in listOf(
+                                LocalTime.of(19, 0),
+                                LocalTime.of(20, 0),
+                                LocalTime.of(21, 0)
+                            )
+                            val customEveningLabel = if (isEveningCustom) {
+                                "Custom (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                            } else {
+                                "Custom..."
+                            }
+
+                            FilterChip(
+                                selected = isEveningCustom,
+                                onClick = {
+                                    customTimeEveningBefore = true
+                                    showTimePickerDialog = true
+                                },
+                                label = { Text(customEveningLabel) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -411,26 +365,31 @@ fun SettingsContent(
                                     )
                                 )
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Custom time picker button
-                        val currentFormatted = settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-                        val timingText = if (settings.reminderEveningBefore) "Evening Before" else "Morning Of"
-
-                        OutlinedButton(
-                            onClick = { showTimePickerDialog = true },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.AccessTime,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                            val isMorningCustom = !settings.reminderEveningBefore && settings.reminderTime !in listOf(
+                                LocalTime.of(6, 0),
+                                LocalTime.of(7, 0),
+                                LocalTime.of(8, 0)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Custom Time ($currentFormatted • $timingText)")
+                            val customMorningLabel = if (isMorningCustom) {
+                                "Custom (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                            } else {
+                                "Custom..."
+                            }
+
+                            FilterChip(
+                                selected = isMorningCustom,
+                                onClick = {
+                                    customTimeEveningBefore = false
+                                    showTimePickerDialog = true
+                                },
+                                label = { Text(customMorningLabel) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -582,7 +541,78 @@ fun SettingsContent(
                 }
             }
 
-            // Section 3: About
+            // Section 3: Theme Preference
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Theme Preference",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Text(
+                        text = "App Appearance",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Select your preferred app display theme",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        AppThemeMode.entries.forEach { mode ->
+                            val isSelected = uiState.themeMode == mode
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSetThemeMode(mode) },
+                                label = { Text(mode.label) },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                } else null,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Section 4: About
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -614,7 +644,7 @@ fun SettingsContent(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Designed for household wheelie bin timetable tracking across England, Wales, Scotland, and Northern Ireland.",
+                        text = "Designed for household bin timetable tracking across England, Wales, Scotland, and Northern Ireland.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -645,7 +675,7 @@ fun SettingsContent(
             },
             text = {
                 Text(
-                    text = "This will clear your current wheelie bins and timetable, and re-run the Setup Wizard so you can set up a new postcode or address.",
+                    text = "This will clear your current bins and timetable, and re-run the Setup Wizard so you can set up a new postcode or address.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -685,7 +715,7 @@ fun SettingsContent(
                 TextButton(
                     onClick = {
                         val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                        onUpdateSchedule(selectedTime, settings.reminderEveningBefore)
+                        onUpdateSchedule(selectedTime, customTimeEveningBefore)
                         showTimePickerDialog = false
                     }
                 ) {
@@ -703,7 +733,7 @@ fun SettingsContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Select Custom Reminder Time",
+                        text = if (customTimeEveningBefore) "Select Custom Evening Time" else "Select Custom Morning Time",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)

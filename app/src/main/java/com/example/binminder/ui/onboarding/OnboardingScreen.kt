@@ -158,7 +158,7 @@ fun OnboardingContent(
                             text = "Step ${uiState.currentStep} of 4: " + when (uiState.currentStep) {
                                 1 -> "Postcode Search"
                                 2 -> "Collection Day"
-                                3 -> "Wheelie Bins"
+                                3 -> "Bins"
                                 4 -> "Reminder Alerts"
                                 else -> ""
                             },
@@ -390,7 +390,7 @@ fun Step1LocationContent(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = "Enter your UK postcode to auto-detect your council collection schedule and wheelie bins.",
+                        text = "Enter your UK postcode to auto-detect your council collection schedule and bins.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
@@ -1130,7 +1130,7 @@ fun Step2CollectionDayContent(
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
-                        text = "Which day of the week are your household wheelie bins collected?",
+                        text = "Which day of the week are your household bins collected?",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                     )
@@ -1235,7 +1235,7 @@ fun Step3BinsContent(
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                     Text(
-                        text = "Choose which wheelie bins you have and their collection frequencies.",
+                        text = "Choose which bins you have and their collection frequencies.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
                     )

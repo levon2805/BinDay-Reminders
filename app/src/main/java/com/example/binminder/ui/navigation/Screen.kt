@@ -53,6 +53,6 @@ enum class BottomNavItem(
     val icon: ImageVector
 ) {
     TIMETABLE(Screen.Dashboard, "Timetable", Icons.Rounded.Schedule),
-    BINS(Screen.BinList, "Wheelie Bins", Icons.Rounded.Delete),
+    BINS(Screen.BinList, "Bins", Icons.Rounded.Delete),
     SETTINGS(Screen.Settings, "Settings", Icons.Rounded.Settings)
 }

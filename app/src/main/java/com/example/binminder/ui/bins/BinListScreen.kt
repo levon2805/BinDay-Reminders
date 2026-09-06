@@ -126,7 +126,7 @@ fun BinListContent(
                 title = {
                     Column {
                         Text(
-                            text = "Wheelie Bins",
+                            text = "Bins",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -215,7 +215,7 @@ fun BinListContent(
             onDismissRequest = onCancelDeleteBin,
             title = {
                 Text(
-                    text = "Delete Wheelie Bin?",
+                    text = "Delete Bin?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -478,7 +478,7 @@ fun EmptyBinsView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "No Wheelie Bins Added",
+            text = "No Bins Added",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -487,7 +487,7 @@ fun EmptyBinsView(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Create custom wheelie bin profiles or load standard UK council defaults.",
+            text = "Create custom bin profiles or load standard UK council defaults.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

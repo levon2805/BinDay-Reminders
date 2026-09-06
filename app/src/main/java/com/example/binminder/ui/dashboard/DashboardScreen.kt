@@ -302,7 +302,7 @@ fun NextCollectionHeroCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = if (events.size > 1) "Wheelie Bins to put out:" else "Wheelie Bin to put out:",
+                text = if (events.size > 1) "Bins to put out:" else "Bin to put out:",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = onContainerColor.copy(alpha = 0.8f)
@@ -461,13 +461,13 @@ fun HeroBinItemCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.CheckCircle,
+                        imageVector = Icons.Rounded.Check,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Put Out ✓",
+                        text = "Bins Are Out",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -478,14 +478,8 @@ fun HeroBinItemCard(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Mark Put Out",
+                        text = "Put Bins Out",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -653,7 +647,7 @@ fun EmptyScheduleView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "No Active Wheelie Bins",
+            text = "No Active Bins",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -662,7 +656,7 @@ fun EmptyScheduleView(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Add your council wheelie bin schedules to display your upcoming timetable.",
+            text = "Add your council bin schedules to display your upcoming timetable.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -675,7 +669,7 @@ fun EmptyScheduleView(
         ) {
             Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Add Wheelie Bin")
+            Text(text = "Add Bin")
         }
     }
 }

@@ -150,7 +150,7 @@ fun AddEditBinContent(
     var showDatePickerDialog by remember { mutableStateOf(false) }
 
     val isEditing = uiState.binId != null && uiState.binId != 0L
-    val screenTitle = if (isEditing) "Edit Wheelie Bin" else "Add Wheelie Bin"
+    val screenTitle = if (isEditing) "Edit Bin" else "Add Bin"
 
     Scaffold(
         topBar = {
@@ -188,7 +188,7 @@ fun AddEditBinContent(
         ) {
             // Live Bin Preview Card Header
             BinPreviewHeader(
-                name = uiState.name.ifBlank { "Wheelie Bin Name" },
+                name = uiState.name.ifBlank { "Bin Name" },
                 presetColor = uiState.presetColor,
                 colorHex = uiState.colorHex,
                 recurrence = uiState.recurrence,
