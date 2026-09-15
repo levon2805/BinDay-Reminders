@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.AppThemeMode
 
+import androidx.compose.ui.composed
+
 private val DarkColorScheme = darkColorScheme(
     primary = BrandVibrantLeaf,
     onPrimary = BrandCharcoalDark,
@@ -72,23 +74,33 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = NeoBorderLight
 )
 
+val NeoShadowLight = Color(0x2B18261F) // Explicit dark slate/black shadow for Light Mode
+val NeoShadowDark = Color(0x88000000)  // Crisp deep black drop shadow for Dark Mode
+
 /**
- * Custom Modifier for Subtle Neo-Brutalist Shadows.
+ * Custom Modifier for Subtle Neo-Brutalist Shadows with high contrast in Light & Dark mode.
+ * Light mode shadow color is explicitly dark slate/black and never resolves to green or container color.
  */
 fun Modifier.neoShadow(
-    color: Color = Color(0xFF2A302C).copy(alpha = 0.5f), // Soft dark slate with transparency
-    offset: Dp = 2.dp // Subtle offset
-): Modifier = this.drawBehind {
-    val offsetPx = offset.toPx()
-    val cornerRadius = 8.dp.toPx() // Rounded corners
+    color: Color = Color.Unspecified,
+    offset: Dp = 4.dp
+): Modifier = composed {
+    val isDark = isSystemInDarkTheme()
+    val defaultShadow = if (isDark) NeoShadowDark else NeoShadowLight
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val shadowColor = if (color != Color.Unspecified && color != outlineColor) color else defaultShadow
 
-    // Draw hard solid shadow
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(offsetPx, offsetPx),
-        size = size,
-        cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-    )
+    this.drawBehind {
+        val offsetPx = offset.toPx()
+        val cornerRadius = 8.dp.toPx()
+
+        drawRoundRect(
+            color = shadowColor,
+            topLeft = Offset(offsetPx, offsetPx),
+            size = size,
+            cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+        )
+    }
 }
 
 /**

@@ -116,19 +116,47 @@ class SettingsViewModel(
     }
 
     /**
+     * Updates evening reminder time (or null if disabled / NONE).
+     */
+    fun updateEveningReminderTime(time: LocalTime?) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(eveningReminderTime = time)
+            repository.updateNotificationSettings(updated)
+            val message = if (time != null) {
+                "Evening reminder set to ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+            } else {
+                "Evening reminder disabled."
+            }
+            _userMessage.value = message
+        }
+    }
+
+    /**
+     * Updates morning reminder time (or null if disabled / NONE).
+     */
+    fun updateMorningReminderTime(time: LocalTime?) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(morningReminderTime = time)
+            repository.updateNotificationSettings(updated)
+            val message = if (time != null) {
+                "Morning reminder set to ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+            } else {
+                "Morning reminder disabled."
+            }
+            _userMessage.value = message
+        }
+    }
+
+    /**
      * Updates notification time and whether alerts fire the evening before collection.
      */
     fun updateReminderSchedule(time: LocalTime, eveningBefore: Boolean) {
-        viewModelScope.launch {
-            val currentSettings = repository.notificationSettings.first()
-            val updated = currentSettings.copy(
-                reminderTime = time,
-                reminderEveningBefore = eveningBefore
-            )
-            repository.updateNotificationSettings(updated)
-            val formattedTime = time.format(DateTimeFormatter.ofPattern("HH:mm"))
-            val timingText = if (eveningBefore) "Evening before" else "Morning of collection"
-            _userMessage.value = "Reminder schedule updated to $formattedTime ($timingText)."
+        if (eveningBefore) {
+            updateEveningReminderTime(time)
+        } else {
+            updateMorningReminderTime(time)
         }
     }
 
@@ -178,10 +206,17 @@ class SettingsViewModel(
     }
 
     /**
+     * Clears current user message / toast notification state immediately when consumed.
+     */
+    fun onToastShown() {
+        _userMessage.value = null
+    }
+
+    /**
      * Clears current user message notification string.
      */
     fun dismissUserMessage() {
-        _userMessage.value = null
+        onToastShown()
     }
 
     private fun generateBankHolidayShiftPreviews(bins: List<Bin>): List<BankHolidayShiftPreview> {

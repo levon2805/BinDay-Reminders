@@ -209,7 +209,7 @@ fun AddEditBinContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 24.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
             // Live Bin Preview Card Header with Dual-Colour Swatch

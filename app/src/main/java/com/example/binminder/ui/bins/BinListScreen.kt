@@ -98,8 +98,8 @@ fun BinListScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
             viewModel.dismissUserMessage()
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -252,7 +252,7 @@ fun BinListContent(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .padding(end = 16.dp)
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Text(
                             text = "RESET",
@@ -276,7 +276,7 @@ fun BinListContent(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                    .neoShadow(offset = 6.dp)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -304,10 +304,6 @@ fun BinListContent(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
                     items(
                         items = uiState.bins,
                         key = { it.id }
@@ -402,7 +398,7 @@ fun WheelieBinCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onEditClicked)
-            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (bin.isEnabled) 6.dp else 2.dp)
+            .neoShadow(offset = if (bin.isEnabled) 6.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -619,7 +615,7 @@ fun EmptyBinsView(
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp),
+                .neoShadow(offset = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -667,7 +663,7 @@ fun EmptyBinsView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                    .neoShadow(offset = 6.dp)
             ) {
                 Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -685,7 +681,7 @@ fun EmptyBinsView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                    .neoShadow(offset = 4.dp)
             ) {
                 Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(8.dp))

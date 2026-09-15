@@ -32,13 +32,19 @@ data class OnboardingUiState(
     val searchError: String? = null,
     val primaryCollectionDay: DayOfWeek? = null,
     val binSetups: List<OnboardingBinSetup> = defaultBinSetups(),
-    val reminderTime: LocalTime = LocalTime.of(19, 0),
-    val reminderEveningBefore: Boolean = true,
+    val eveningReminderTime: LocalTime? = LocalTime.of(19, 0),
+    val morningReminderTime: LocalTime? = LocalTime.of(7, 0),
     val reminderEnabled: Boolean = true,
     val isCompleting: Boolean = false,
     val isCompleted: Boolean = false,
     val userMessage: String? = null
-)
+) {
+    val reminderTime: LocalTime
+        get() = eveningReminderTime ?: morningReminderTime ?: LocalTime.of(19, 0)
+
+    val reminderEveningBefore: Boolean
+        get() = eveningReminderTime != null
+}
 
 /**
  * Returns standard default bin configurations for initial setup.
@@ -337,12 +343,32 @@ class OnboardingViewModel(
      */
     fun setReminderSettings(time: LocalTime, eveningBefore: Boolean, enabled: Boolean) {
         _uiState.update { state ->
-            state.copy(
-                reminderTime = time,
-                reminderEveningBefore = eveningBefore,
-                reminderEnabled = enabled
-            )
+            if (eveningBefore) {
+                state.copy(
+                    eveningReminderTime = time,
+                    reminderEnabled = enabled
+                )
+            } else {
+                state.copy(
+                    morningReminderTime = time,
+                    reminderEnabled = enabled
+                )
+            }
         }
+    }
+
+    /**
+     * Updates evening reminder time (or null if NONE).
+     */
+    fun updateEveningReminderTime(time: LocalTime?) {
+        _uiState.update { it.copy(eveningReminderTime = time) }
+    }
+
+    /**
+     * Updates morning reminder time (or null if NONE).
+     */
+    fun updateMorningReminderTime(time: LocalTime?) {
+        _uiState.update { it.copy(morningReminderTime = time) }
     }
 
     /**
@@ -393,8 +419,8 @@ class OnboardingViewModel(
 
             val settings = NotificationSettings(
                 reminderEnabled = _uiState.value.reminderEnabled,
-                reminderTime = _uiState.value.reminderTime,
-                reminderEveningBefore = _uiState.value.reminderEveningBefore
+                eveningReminderTime = _uiState.value.eveningReminderTime,
+                morningReminderTime = _uiState.value.morningReminderTime
             )
 
             repository.completeOnboardingSetup(

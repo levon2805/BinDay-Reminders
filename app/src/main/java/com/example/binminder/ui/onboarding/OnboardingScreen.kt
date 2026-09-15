@@ -326,7 +326,7 @@ fun OnboardingContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) { step ->
                 when (step) {
                     1 -> Step1CouncilContent(

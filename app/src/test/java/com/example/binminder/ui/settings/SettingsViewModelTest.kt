@@ -100,31 +100,33 @@ class SettingsViewModelTest {
     @Test
     fun testUpdateReminderSchedule() = runTest {
         val newTime = LocalTime.of(21, 0)
-        viewModel.updateReminderSchedule(newTime, true)
+        viewModel.updateEveningReminderTime(newTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(newTime, fakeRepository.notificationSettingsState.reminderTime)
-        assertTrue(fakeRepository.notificationSettingsState.reminderEveningBefore)
+        assertEquals(newTime, fakeRepository.notificationSettingsState.eveningReminderTime)
         assertTrue(viewModel.uiState.value.userMessage!!.contains("21:00"))
     }
 
     @Test
     fun testUpdateReminderScheduleCustomTime() = runTest {
-        val customTime = LocalTime.of(19, 30)
-        viewModel.updateReminderSchedule(customTime, true)
+        val customEveningTime = LocalTime.of(19, 30)
+        viewModel.updateEveningReminderTime(customEveningTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(customTime, fakeRepository.notificationSettingsState.reminderTime)
-        assertTrue(fakeRepository.notificationSettingsState.reminderEveningBefore)
+        assertEquals(customEveningTime, fakeRepository.notificationSettingsState.eveningReminderTime)
         assertTrue(viewModel.uiState.value.userMessage!!.contains("19:30"))
 
         val customMorningTime = LocalTime.of(6, 45)
-        viewModel.updateReminderSchedule(customMorningTime, false)
+        viewModel.updateMorningReminderTime(customMorningTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(customMorningTime, fakeRepository.notificationSettingsState.reminderTime)
-        assertFalse(fakeRepository.notificationSettingsState.reminderEveningBefore)
+        assertEquals(customMorningTime, fakeRepository.notificationSettingsState.morningReminderTime)
         assertTrue(viewModel.uiState.value.userMessage!!.contains("06:45"))
+
+        viewModel.updateEveningReminderTime(null)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(null, fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertEquals("Evening reminder disabled.", viewModel.uiState.value.userMessage)
     }
 
     @Test
@@ -240,6 +242,13 @@ class SettingsViewModelTest {
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {
             notificationSettingsState = settings
             settingsFlow.value = settings
+        }
+
+        private val putOutBinsFlow = MutableStateFlow<Set<Long>>(emptySet())
+        override val putOutBins: Flow<Set<Long>> = putOutBinsFlow
+
+        override suspend fun updatePutOutBins(binIds: Set<Long>) {
+            putOutBinsFlow.value = binIds
         }
 
         override val themeMode: Flow<AppThemeMode> = themeModeFlow

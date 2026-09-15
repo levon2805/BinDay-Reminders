@@ -109,6 +109,13 @@ class DashboardViewModelTest {
 
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
+
+        private val putOutBinsFlow = MutableStateFlow<Set<Long>>(emptySet())
+        override val putOutBins: Flow<Set<Long>> = putOutBinsFlow
+
+        override suspend fun updatePutOutBins(binIds: Set<Long>) {
+            putOutBinsFlow.value = binIds
+        }
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)
         override suspend fun setThemeMode(themeMode: AppThemeMode) {}
         override val onboardingCompleted: Flow<Boolean> = flowOf(true)

@@ -235,6 +235,19 @@ class BinRepositoryImpl(
     }
 
     /**
+     * Observes set of put out bin IDs as a flow on [Dispatchers.IO].
+     */
+    override val putOutBins: Flow<Set<Long>> =
+        notificationSettingsDataStore.putOutBinIds.flowOn(Dispatchers.IO)
+
+    /**
+     * Updates set of put out bin IDs on [Dispatchers.IO].
+     */
+    override suspend fun updatePutOutBins(binIds: Set<Long>): Unit = withContext(Dispatchers.IO) {
+        notificationSettingsDataStore.setPutOutBinIds(binIds)
+    }
+
+    /**
      * Observes active theme choices as a flow on [Dispatchers.IO].
      */
     override val themeMode: Flow<AppThemeMode> =

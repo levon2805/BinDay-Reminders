@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -97,18 +98,19 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
             viewModel.dismissUserMessage()
+            snackbarHostState.showSnackbar(message)
         }
     }
 
     DashboardContent(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        onMarkBinPutOut = { binId, name -> viewModel.markBinPutOut(binId, name) },
+        onMarkBinPutOut = { binId, name -> viewModel.markBinPutOut(binId, name, context) },
         onNavigateToAddBin = onNavigateToAddBin,
         onNavigateToBinDetail = onNavigateToBinDetail,
         onNavigateToSettings = onNavigateToSettings,
@@ -210,7 +212,6 @@ fun DashboardContent(
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
                         NextCollectionHeroCard(
                             nextDate = uiState.nextCollectionDate ?: LocalDate.now(),
                             daysRemaining = uiState.daysRemaining,
@@ -246,7 +247,7 @@ fun DashboardContent(
                                             contentColor = MaterialTheme.colorScheme.onTertiary
                                         ),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                        modifier = Modifier.neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                                        modifier = Modifier.neoShadow(offset = 4.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.CalendarToday,
@@ -300,7 +301,6 @@ fun NextCollectionHeroCard(
 ) {
     val containerColor = MaterialTheme.colorScheme.primaryContainer
     val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
-    val shadowColor = MaterialTheme.colorScheme.outline
 
     val hasBankHolidayShift = events.any { it.isBankHolidayAdjusted }
 
@@ -317,7 +317,7 @@ fun NextCollectionHeroCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = modifier
             .fillMaxWidth()
-            .neoShadow(color = shadowColor, offset = 8.dp)
+            .neoShadow(offset = 8.dp)
     ) {
         Column(
             modifier = Modifier.padding(24.dp)
@@ -404,7 +404,7 @@ fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
-            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+            .neoShadow(offset = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -446,7 +446,7 @@ fun HeroBinItemCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
-            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+            .neoShadow(offset = 6.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -524,7 +524,6 @@ fun HeroBinItemCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .neoShadow(
-                        color = MaterialTheme.colorScheme.outline,
                         offset = if (isPutOut) 0.dp else 4.dp // Press effect!
                     )
             ) {
@@ -594,7 +593,7 @@ fun UpcomingDateSection(
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                .neoShadow(offset = 4.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -641,7 +640,7 @@ fun UpcomingEventCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+            .neoShadow(offset = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -733,7 +732,7 @@ fun EmptyScheduleView(
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp),
+                .neoShadow(offset = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -774,7 +773,7 @@ fun EmptyScheduleView(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier
                 .height(56.dp)
-                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                .neoShadow(offset = 6.dp)
         ) {
             Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(12.dp))

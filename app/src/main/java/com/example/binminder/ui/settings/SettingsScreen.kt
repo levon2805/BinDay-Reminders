@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
@@ -145,8 +144,8 @@ fun SettingsScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
+            viewModel.onToastShown()
             snackbarHostState.showSnackbar(message)
-            viewModel.dismissUserMessage()
         }
     }
 
@@ -165,6 +164,8 @@ fun SettingsScreen(
                 viewModel.toggleReminders(false, context)
             }
         },
+        onUpdateEveningTime = { time -> viewModel.updateEveningReminderTime(time) },
+        onUpdateMorningTime = { time -> viewModel.updateMorningReminderTime(time) },
         onUpdateSchedule = { time, eveningBefore ->
             viewModel.updateReminderSchedule(time, eveningBefore)
         },
@@ -193,7 +194,9 @@ fun SettingsContent(
     snackbarHostState: SnackbarHostState,
     onSetThemeMode: (AppThemeMode) -> Unit,
     onToggleReminders: (Boolean) -> Unit,
-    onUpdateSchedule: (LocalTime, Boolean) -> Unit,
+    onUpdateEveningTime: (LocalTime?) -> Unit,
+    onUpdateMorningTime: (LocalTime?) -> Unit,
+    onUpdateSchedule: (LocalTime, Boolean) -> Unit = { _, _ -> },
     onSendTestNotification: () -> Unit,
     onResetDefaultBins: () -> Unit,
     onResetAndStartSetup: () -> Unit,
@@ -242,7 +245,7 @@ fun SettingsContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Section 1: Notifications & Reminder Schedule
@@ -252,7 +255,7 @@ fun SettingsContent(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                    .neoShadow(offset = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(
@@ -329,20 +332,38 @@ fun SettingsContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            val isEveningNone = settings.eveningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isEveningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isEveningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateEveningTime(null) }
+                                    .neoShadow(offset = if (isEveningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "NONE",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
                             listOf(
                                 LocalTime.of(19, 0) to "19:00",
                                 LocalTime.of(20, 0) to "20:00",
                                 LocalTime.of(21, 0) to "21:00"
                             ).forEach { (time, label) ->
-                                val isSelected = settings.reminderEveningBefore && settings.reminderTime == time
+                                val isSelected = settings.eveningReminderTime == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
-                                        .clickable { onUpdateSchedule(time, true) }
-                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                        .clickable { onUpdateEveningTime(time) }
+                                        .neoShadow(offset = if (isSelected) 0.dp else 4.dp)
                                 ) {
                                     Text(
                                         text = label,
@@ -353,15 +374,15 @@ fun SettingsContent(
                                 }
                             }
 
-                            val isEveningCustom = settings.reminderEveningBefore && settings.reminderTime !in listOf(
+                            val isEveningCustom = settings.eveningReminderTime != null && settings.eveningReminderTime !in listOf(
                                 LocalTime.of(19, 0),
                                 LocalTime.of(20, 0),
                                 LocalTime.of(21, 0)
                             )
                             val customEveningLabel = if (isEveningCustom) {
-                                "CUSTOM (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "CUSTOM (${settings.eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "CUSTOM"
+                                "CUSTOM..."
                             }
 
                             Surface(
@@ -374,7 +395,7 @@ fun SettingsContent(
                                         customTimeEveningBefore = true
                                         showTimePickerDialog = true
                                     }
-                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
+                                    .neoShadow(offset = if (isEveningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
                                     text = customEveningLabel,
@@ -400,20 +421,38 @@ fun SettingsContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            val isMorningNone = settings.morningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isMorningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isMorningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateMorningTime(null) }
+                                    .neoShadow(offset = if (isMorningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "NONE",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
                             listOf(
                                 LocalTime.of(6, 0) to "06:00",
                                 LocalTime.of(7, 0) to "07:00",
                                 LocalTime.of(8, 0) to "08:00"
                             ).forEach { (time, label) ->
-                                val isSelected = !settings.reminderEveningBefore && settings.reminderTime == time
+                                val isSelected = settings.morningReminderTime == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
-                                        .clickable { onUpdateSchedule(time, false) }
-                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                        .clickable { onUpdateMorningTime(time) }
+                                        .neoShadow(offset = if (isSelected) 0.dp else 4.dp)
                                 ) {
                                     Text(
                                         text = label,
@@ -424,15 +463,15 @@ fun SettingsContent(
                                 }
                             }
 
-                            val isMorningCustom = !settings.reminderEveningBefore && settings.reminderTime !in listOf(
+                            val isMorningCustom = settings.morningReminderTime != null && settings.morningReminderTime !in listOf(
                                 LocalTime.of(6, 0),
                                 LocalTime.of(7, 0),
                                 LocalTime.of(8, 0)
                             )
                             val customMorningLabel = if (isMorningCustom) {
-                                "CUSTOM (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "CUSTOM (${settings.morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "CUSTOM"
+                                "CUSTOM..."
                             }
 
                             Surface(
@@ -445,7 +484,7 @@ fun SettingsContent(
                                         customTimeEveningBefore = false
                                         showTimePickerDialog = true
                                     }
-                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningCustom) 0.dp else 4.dp)
+                                    .neoShadow(offset = if (isMorningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
                                     text = customMorningLabel,
@@ -492,7 +531,7 @@ fun SettingsContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .animateContentSize()
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                    .neoShadow(offset = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(
@@ -550,7 +589,7 @@ fun SettingsContent(
                                         shape = RoundedCornerShape(8.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                        modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                                        modifier = Modifier.fillMaxWidth().neoShadow(offset = 4.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier
@@ -616,7 +655,7 @@ fun SettingsContent(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                    .neoShadow(offset = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(
@@ -649,7 +688,7 @@ fun SettingsContent(
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(offset = 4.dp)
                     ) {
                         Icon(imageVector = Icons.Outlined.CalendarToday, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(12.dp))
@@ -670,7 +709,7 @@ fun SettingsContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -713,7 +752,7 @@ fun SettingsContent(
                             contentColor = Color.White
                         ),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(offset = 4.dp)
                     ) {
                         Icon(imageVector = Icons.Rounded.RestartAlt, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(12.dp))
@@ -733,7 +772,7 @@ fun SettingsContent(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
+                    .neoShadow(offset = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(
@@ -903,7 +942,11 @@ fun SettingsContent(
                 Button(
                     onClick = {
                         val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                        onUpdateSchedule(selectedTime, customTimeEveningBefore)
+                        if (customTimeEveningBefore) {
+                            onUpdateEveningTime(selectedTime)
+                        } else {
+                            onUpdateMorningTime(selectedTime)
+                        }
                         showTimePickerDialog = false
                     },
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -990,7 +1033,7 @@ fun SettingsScreenPreview() {
             uiState = SettingsUiState(
                 notificationSettings = NotificationSettings(
                     reminderEnabled = true,
-                    reminderEveningBefore = true
+                    eveningReminderTime = LocalTime.of(19, 0)
                 ),
                 bankHolidayPreviews = listOf(
                     BankHolidayShiftPreview(
@@ -1007,6 +1050,8 @@ fun SettingsScreenPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onSetThemeMode = {},
             onToggleReminders = {},
+            onUpdateEveningTime = {},
+            onUpdateMorningTime = {},
             onUpdateSchedule = { _, _ -> },
             onSendTestNotification = {},
             onResetDefaultBins = {},

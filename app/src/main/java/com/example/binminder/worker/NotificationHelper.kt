@@ -88,4 +88,13 @@ object NotificationHelper {
 
         NotificationManagerCompat.from(context).notify(notificationId, builder.build())
     }
+
+    /**
+     * Cancels an active bin collection notification from the system tray.
+     */
+    fun cancelNotification(context: Context, notificationId: Int = 1001) {
+        try {
+            NotificationManagerCompat.from(context).cancel(notificationId)
+        } catch (_: Exception) {}
+    }
 }

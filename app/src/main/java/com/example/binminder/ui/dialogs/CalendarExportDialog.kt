@@ -3,6 +3,7 @@ package com.example.binminder.ui.dialogs
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,7 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -108,13 +110,14 @@ fun CalendarExportDialog(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Column(
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
+                            .fillMaxWidth(),
                     ) {
-                        activeBins.forEach { bin ->
+                        items(activeBins, key = { it.id }) { bin ->
                             val nextDate = CalendarExportUtils.calculateNextCollectionDate(bin)
                             val formattedDate = nextDate.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK)).uppercase()
                             val recurrenceLabel = bin.recurrence.displayName.uppercase()
@@ -128,7 +131,7 @@ fun CalendarExportDialog(
                                 shape = RoundedCornerShape(8.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier.neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                                modifier = Modifier.neoShadow(offset = 4.dp)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -184,7 +187,7 @@ fun CalendarExportDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
@@ -213,7 +216,7 @@ fun CalendarExportDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CalendarToday,
@@ -240,7 +243,7 @@ fun CalendarExportDialog(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -285,7 +288,7 @@ fun CalendarExportDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            .neoShadow(offset = 4.dp)
                     ) {
                         Text(
                             text = "SYNC IT ➔",
@@ -342,12 +345,11 @@ fun CalendarExportDialog(
                     onClick = onDismissRequest,
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                 ) {
                     Text("DONE", fontWeight = FontWeight.ExtraBold)
                 }
             } else {
-                Button(
+                OutlinedButton(
                     onClick = {
                         if (isGuidedQueueMode) {
                             isGuidedQueueMode = false
@@ -357,11 +359,13 @@ fun CalendarExportDialog(
                         }
                     },
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.neoShadow(color = MaterialTheme.colorScheme.outline, offset = 2.dp)
                 ) {
-                    Text(if (isGuidedQueueMode) "BACK" else "CANCEL", fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        text = if (isGuidedQueueMode) "BACK" else "CANCEL",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         },

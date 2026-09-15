@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.NotificationSettings
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +29,9 @@ class NotificationSettingsDataStore(context: Context) {
 
     private object Keys {
         val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
+        val EVENING_REMINDER_TIME = stringPreferencesKey("evening_reminder_time")
+        val MORNING_REMINDER_TIME = stringPreferencesKey("morning_reminder_time")
+        val PUT_OUT_BIN_IDS = stringSetPreferencesKey("put_out_bin_ids")
         val REMINDER_HOUR = intPreferencesKey("reminder_hour")
         val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
         val REMINDER_EVENING_BEFORE = booleanPreferencesKey("reminder_evening_before")
@@ -41,18 +46,56 @@ class NotificationSettingsDataStore(context: Context) {
      */
     val notificationSettings: Flow<NotificationSettings> = applicationContext.dataStore.data.map { prefs ->
         val enabled = prefs[Keys.REMINDER_ENABLED] ?: true
-        val hour = prefs[Keys.REMINDER_HOUR] ?: 19
-        val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
-        val eveningBefore = prefs[Keys.REMINDER_EVENING_BEFORE] ?: true
         val themeModeRaw = prefs[Keys.THEME_MODE]
         val mode = themeModeRaw?.let { runCatching { AppThemeMode.valueOf(it) }.getOrNull() } ?: AppThemeMode.SYSTEM
 
+        val eveningStr = prefs[Keys.EVENING_REMINDER_TIME]
+        val eveningTime = if (eveningStr != null) {
+            if (eveningStr == "NONE") null else runCatching { LocalTime.parse(eveningStr) }.getOrNull()
+        } else {
+            val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: true
+            if (legacyEvening) {
+                val hour = prefs[Keys.REMINDER_HOUR] ?: 19
+                val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                LocalTime.of(hour, minute)
+            } else null
+        }
+
+        val morningStr = prefs[Keys.MORNING_REMINDER_TIME]
+        val morningTime = if (morningStr != null) {
+            if (morningStr == "NONE") null else runCatching { LocalTime.parse(morningStr) }.getOrNull()
+        } else {
+            val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: false
+            if (!legacyEvening) {
+                val hour = prefs[Keys.REMINDER_HOUR] ?: 7
+                val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                LocalTime.of(hour, minute)
+            } else null
+        }
+
         NotificationSettings(
             reminderEnabled = enabled,
-            reminderTime = LocalTime.of(hour, minute),
-            reminderEveningBefore = eveningBefore,
+            eveningReminderTime = eveningTime,
+            morningReminderTime = morningTime,
             themeMode = mode
         )
+    }
+
+    /**
+     * Observes the set of bin IDs currently marked as put out for collection.
+     */
+    val putOutBinIds: Flow<Set<Long>> = applicationContext.dataStore.data.map { prefs ->
+        val stringSet = prefs[Keys.PUT_OUT_BIN_IDS] ?: emptySet()
+        stringSet.mapNotNull { it.toLongOrNull() }.toSet()
+    }
+
+    /**
+     * Updates the saved put out bin IDs set.
+     */
+    suspend fun setPutOutBinIds(binIds: Set<Long>) {
+        applicationContext.dataStore.edit { prefs ->
+            prefs[Keys.PUT_OUT_BIN_IDS] = binIds.map { it.toString() }.toSet()
+        }
     }
 
     /**
@@ -118,9 +161,8 @@ class NotificationSettingsDataStore(context: Context) {
     suspend fun updateSettings(settings: NotificationSettings) {
         applicationContext.dataStore.edit { prefs ->
             prefs[Keys.REMINDER_ENABLED] = settings.reminderEnabled
-            prefs[Keys.REMINDER_HOUR] = settings.reminderTime.hour
-            prefs[Keys.REMINDER_MINUTE] = settings.reminderTime.minute
-            prefs[Keys.REMINDER_EVENING_BEFORE] = settings.reminderEveningBefore
+            prefs[Keys.EVENING_REMINDER_TIME] = settings.eveningReminderTime?.toString() ?: "NONE"
+            prefs[Keys.MORNING_REMINDER_TIME] = settings.morningReminderTime?.toString() ?: "NONE"
             prefs[Keys.THEME_MODE] = settings.themeMode.name
         }
     }

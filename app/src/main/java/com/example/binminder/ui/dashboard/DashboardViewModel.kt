@@ -1,5 +1,6 @@
 package com.example.binminder.ui.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.binminder.data.model.Bin
@@ -7,10 +8,12 @@ import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.GetUpcomingCollectionsUseCase
 import com.example.binminder.domain.ToggleBinPutOutUseCase
+import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -48,6 +51,8 @@ class DashboardViewModel(
     init {
         viewModelScope.launch {
             repository.ensureDefaultBinsInitialized()
+            val initialPutOut = repository.putOutBins.first()
+            _putOutBins.value = initialPutOut
         }
     }
 
@@ -99,7 +104,7 @@ class DashboardViewModel(
     /**
      * Toggles whether a specific bin has been put out on the kerb for collection using [ToggleBinPutOutUseCase].
      */
-    fun markBinPutOut(binId: Long, binName: String) {
+    fun markBinPutOut(binId: Long, binName: String, context: Context? = null) {
         val result = toggleBinPutOutUseCase(
             binId = binId,
             binName = binName,
@@ -108,6 +113,15 @@ class DashboardViewModel(
 
         _putOutBins.value = result.updatedPutOutBins
         _userMessage.value = result.userMessage
+
+        viewModelScope.launch {
+            repository.updatePutOutBins(result.updatedPutOutBins)
+            if (context != null) {
+                NotificationScheduler.cancelOrSuppressNotificationForToday(context)
+                val settings = repository.notificationSettings.first()
+                NotificationScheduler.scheduleDailyReminder(context, settings)
+            }
+        }
     }
 
     /**
