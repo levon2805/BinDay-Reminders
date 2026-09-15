@@ -22,7 +22,8 @@ object NotificationScheduler {
      */
     fun scheduleDailyReminder(context: Context, settings: NotificationSettings) {
         try {
-            val workManager = WorkManager.getInstance(context)
+            val appContext = context.applicationContext
+            val workManager = WorkManager.getInstance(appContext)
 
             if (!settings.reminderEnabled) {
                 workManager.cancelUniqueWork(WORK_NAME)
@@ -59,8 +60,8 @@ object NotificationScheduler {
     fun sendImmediateTestNotification(context: Context) {
         try {
             NotificationHelper.postCollectionReminderNotification(
-                context = context,
-                title = "BinMinder Test Reminder 🚛",
+                context = context.applicationContext,
+                title = "BinDay Test Reminder 🚛",
                 message = "Test reminder successful! Your wheelie bin collection notifications are configured correctly.",
                 notificationId = 9999
             )
@@ -72,7 +73,7 @@ object NotificationScheduler {
      */
     fun cancelReminder(context: Context) {
         try {
-            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            WorkManager.getInstance(context.applicationContext).cancelUniqueWork(WORK_NAME)
         } catch (_: Exception) {
             // Safe fallback for unit tests or uninitialised WorkManager context
         }

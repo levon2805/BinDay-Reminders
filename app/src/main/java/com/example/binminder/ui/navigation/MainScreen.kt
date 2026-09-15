@@ -9,10 +9,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -45,7 +45,7 @@ fun MainScreen(
     val factory = remember(appContainer) { ViewModelFactory(appContainer) }
     val backStack = rememberNavBackStack(Screen.Dashboard)
 
-    val onboardingCompleted by repository.onboardingCompleted.collectAsState(initial = null)
+    val onboardingCompleted by repository.onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
 
     LaunchedEffect(onboardingCompleted) {
         if (onboardingCompleted == false) {
@@ -160,10 +160,8 @@ fun MainScreen(
                     SettingsScreen(
                         viewModel = settingsViewModel,
                         onReRunSetupWizard = {
-                            settingsViewModel.resetOnboarding {
-                                backStack.clear()
-                                backStack.add(Screen.Onboarding)
-                            }
+                            backStack.clear()
+                            backStack.add(Screen.Onboarding)
                         }
                     )
                 }

@@ -10,7 +10,7 @@ import java.time.LocalDate
 /**
  * Room database entity representing a household bin in local persistence.
  * 
- * Stores bin properties such as name, hex colour code, recurrence pattern, and start date.
+ * Stores bin properties such as name, hex colour code, lid colour, recurrence pattern, and start date.
  */
 @Entity(tableName = "bins")
 data class BinEntity(
@@ -18,6 +18,8 @@ data class BinEntity(
     val name: String,
     val colorHex: String,
     val presetColor: String,
+    val lidColorHex: String? = null,
+    val lidPresetColor: String? = null,
     val recurrence: String,
     val repeatIntervalWeeks: Int,
     val startDateEpochDay: Long,
@@ -34,6 +36,8 @@ data class BinEntity(
             name = name,
             colorHex = colorHex,
             presetColor = BinColor.fromName(presetColor),
+            lidColorHex = lidColorHex,
+            lidPresetColor = lidPresetColor?.let { BinColor.fromName(it) },
             recurrence = RecurrenceType.fromName(recurrence),
             repeatIntervalWeeks = repeatIntervalWeeks,
             startDate = LocalDate.ofEpochDay(startDateEpochDay),
@@ -53,6 +57,8 @@ data class BinEntity(
                 name = bin.name,
                 colorHex = bin.colorHex,
                 presetColor = bin.presetColor.name,
+                lidColorHex = bin.lidColorHex,
+                lidPresetColor = bin.lidPresetColor?.name,
                 recurrence = bin.recurrence.name,
                 repeatIntervalWeeks = bin.repeatIntervalWeeks,
                 startDateEpochDay = bin.startDate.toEpochDay(),

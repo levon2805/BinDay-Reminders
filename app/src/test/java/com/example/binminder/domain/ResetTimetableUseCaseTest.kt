@@ -50,6 +50,7 @@ class ResetTimetableUseCaseTest {
         override suspend fun deleteBin(bin: Bin) {}
         override suspend fun clearAllBins() {}
         override suspend fun ensureDefaultBinsInitialized() {}
+        override suspend fun restoreStandardBins() {}
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)

@@ -1,14 +1,16 @@
 package com.example.binminder.ui.bins
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.ResetTimetableUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -28,30 +30,32 @@ data class BinListUiState(
  */
 class BinListViewModel(
     private val repository: BinRepository,
-    private val resetTimetableUseCase: ResetTimetableUseCase = ResetTimetableUseCase(repository)
+    private val resetTimetableUseCase: ResetTimetableUseCase = ResetTimetableUseCase(repository),
+    started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BinListUiState())
+    private val _userMessage = MutableStateFlow<String?>(null)
+    private val _binToDelete = MutableStateFlow<Bin?>(null)
 
     /**
      * Observable flow of the bin list UI state.
      */
-    val uiState: StateFlow<BinListUiState> = _uiState.asStateFlow()
-
-    init {
-        loadBins()
-    }
-
-    private fun loadBins() {
-        viewModelScope.launch {
-            repository.allBins.collectLatest { bins ->
-                _uiState.value = _uiState.value.copy(
-                    bins = bins,
-                    isLoading = false
-                )
-            }
-        }
-    }
+    val uiState: StateFlow<BinListUiState> = combine(
+        repository.allBins,
+        _userMessage,
+        _binToDelete
+    ) { bins, userMessage, binToDelete ->
+        BinListUiState(
+            bins = bins,
+            isLoading = false,
+            userMessage = userMessage,
+            binToDelete = binToDelete
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = started,
+        initialValue = BinListUiState(isLoading = true)
+    )
 
     /**
      * Toggles whether a bin is enabled for collection schedule generation.
@@ -61,9 +65,7 @@ class BinListViewModel(
             val updatedBin = bin.copy(isEnabled = !bin.isEnabled)
             repository.updateBin(updatedBin)
             val status = if (updatedBin.isEnabled) "enabled" else "disabled"
-            _uiState.value = _uiState.value.copy(
-                userMessage = "'${bin.name}' $status."
-            )
+            _userMessage.value = "'${bin.name}' $status."
         }
     }
 
@@ -71,39 +73,45 @@ class BinListViewModel(
      * Opens the deletion confirmation prompt for the specified bin.
      */
     fun requestDeleteBin(bin: Bin) {
-        _uiState.value = _uiState.value.copy(binToDelete = bin)
+        _binToDelete.value = bin
     }
 
     /**
      * Cancels pending bin deletion and closes the confirmation dialogue.
      */
     fun cancelDeleteBin() {
-        _uiState.value = _uiState.value.copy(binToDelete = null)
+        _binToDelete.value = null
     }
 
     /**
      * Confirms and deletes the requested bin from persistent storage.
      */
     fun confirmDeleteBin() {
-        val bin = _uiState.value.binToDelete ?: return
+        val bin = _binToDelete.value ?: return
         viewModelScope.launch {
             repository.deleteBin(bin)
-            _uiState.value = _uiState.value.copy(
-                binToDelete = null,
-                userMessage = "Deleted '${bin.name}' wheelie bin."
-            )
+            _binToDelete.value = null
+            _userMessage.value = "Deleted '${bin.name}' wheelie bin."
         }
     }
 
     /**
-     * Restores default UK council bin profiles if needed.
+     * Restores default UK council bin profiles.
      */
     fun resetDefaultBins() {
         viewModelScope.launch {
-            repository.ensureDefaultBinsInitialized()
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Reset default UK council wheelie bins."
-            )
+            repository.restoreStandardBins()
+            _userMessage.value = "Restored standard UK wheelie bin profile."
+        }
+    }
+
+    /**
+     * Clears saved bins and resets onboarding state for setup wizard re-run via [ResetTimetableUseCase].
+     */
+    fun resetTimetableAndAddress(context: Context, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            resetTimetableUseCase(context)
+            onComplete()
         }
     }
 
@@ -111,6 +119,6 @@ class BinListViewModel(
      * Clears current user message notification string.
      */
     fun dismissUserMessage() {
-        _uiState.value = _uiState.value.copy(userMessage = null)
+        _userMessage.value = null
     }
 }

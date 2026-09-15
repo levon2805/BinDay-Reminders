@@ -36,8 +36,11 @@ object ScheduleEngine {
         startDate: LocalDate,
         endDate: LocalDate
     ): List<CollectionEvent> {
+        if (startDate.isAfter(endDate)) return emptyList()
+
         val events = mutableListOf<CollectionEvent>()
-        val intervalWeeks = if (bin.repeatIntervalWeeks > 0) bin.repeatIntervalWeeks else bin.recurrence.intervalWeeks
+        val rawWeeks = if (bin.repeatIntervalWeeks > 0) bin.repeatIntervalWeeks else bin.recurrence.intervalWeeks
+        val intervalWeeks = maxOf(1, rawWeeks)
         val intervalDays = intervalWeeks * 7L
 
         var current = bin.startDate
@@ -60,7 +63,7 @@ object ScheduleEngine {
                 Pair(current, false)
             }
 
-            // Ensure the adjusted date falls within the target window (or at least <= endDate + 2 days)
+            // Ensure the adjusted date falls within the target window (or at least <= endDate + 7 days)
             if (!finalDate.isBefore(startDate) && !finalDate.isAfter(endDate.plusDays(7))) {
                 events.add(
                     CollectionEvent(
@@ -68,10 +71,13 @@ object ScheduleEngine {
                         binName = bin.name,
                         binColorHex = bin.colorHex,
                         presetColor = bin.presetColor,
+                        lidColorHex = bin.lidColorHex,
+                        lidPresetColor = bin.lidPresetColor,
                         collectionDate = finalDate,
                         originalDate = current,
                         isBankHolidayAdjusted = isAdjusted,
-                        customNote = bin.customNote
+                        customNote = bin.customNote,
+                        repeatIntervalWeeks = intervalWeeks
                     )
                 )
             }

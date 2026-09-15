@@ -43,15 +43,17 @@ interface AppContainer {
  * Default thread-safe implementation of [AppContainer] providing application singletons.
  */
 class DefaultAppContainer(
-    private val context: Context
+    context: Context
 ) : AppContainer {
 
+    private val applicationContext = context.applicationContext
+
     override val database: AppDatabase by lazy {
-        AppDatabase.getInstance(context)
+        AppDatabase.getInstance(applicationContext)
     }
 
     override val notificationSettingsDataStore: NotificationSettingsDataStore by lazy {
-        NotificationSettingsDataStore(context)
+        NotificationSettingsDataStore(applicationContext)
     }
 
     override val councilLookupService: CouncilLookupService by lazy {

@@ -2,14 +2,16 @@ package com.example.binminder.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.GetUpcomingCollectionsUseCase
 import com.example.binminder.domain.ToggleBinPutOutUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -24,6 +26,7 @@ data class DashboardUiState(
     val daysRemaining: Long = 0,
     val upcomingEventsGrouped: Map<LocalDate, List<CollectionEvent>> = emptyMap(),
     val putOutBins: Set<Long> = emptySet(),
+    val allBins: List<Bin> = emptyList(),
     val userMessage: String? = null
 )
 
@@ -34,55 +37,64 @@ data class DashboardUiState(
  */
 class DashboardViewModel(
     private val repository: BinRepository,
-    private val getUpcomingCollectionsUseCase: GetUpcomingCollectionsUseCase = GetUpcomingCollectionsUseCase(repository),
-    private val toggleBinPutOutUseCase: ToggleBinPutOutUseCase = ToggleBinPutOutUseCase()
+    getUpcomingCollectionsUseCase: GetUpcomingCollectionsUseCase = GetUpcomingCollectionsUseCase(repository),
+    private val toggleBinPutOutUseCase: ToggleBinPutOutUseCase = ToggleBinPutOutUseCase(),
+    started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
-
-    /**
-     * Observable flow of the current immutable dashboard UI state.
-     */
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val _putOutBins = MutableStateFlow<Set<Long>>(emptySet())
+    private val _userMessage = MutableStateFlow<String?>(null)
 
     init {
         viewModelScope.launch {
             repository.ensureDefaultBinsInitialized()
-            loadSchedule()
         }
     }
 
-    private fun loadSchedule() {
+    /**
+     * Observable flow of the current immutable dashboard UI state.
+     */
+    val uiState: StateFlow<DashboardUiState> = combine(
+        getUpcomingCollectionsUseCase(LocalDate.now(), LocalDate.now().plusWeeks(8)),
+        repository.allBins,
+        _putOutBins,
+        _userMessage
+    ) { events, allBins, putOutBins, userMessage ->
         val today = LocalDate.now()
-        val endDate = today.plusWeeks(8)
+        val validEvents = events.filter { !it.collectionDate.isBefore(today) }
 
-        viewModelScope.launch {
-            getUpcomingCollectionsUseCase(today, endDate).collectLatest { events ->
-                val validEvents = events.filter { !it.collectionDate.isBefore(today) }
+        if (validEvents.isEmpty()) {
+            DashboardUiState(
+                isLoading = false,
+                putOutBins = putOutBins,
+                allBins = allBins,
+                userMessage = userMessage
+            )
+        } else {
+            val grouped = validEvents.groupBy { it.collectionDate }
+            val earliestDate = grouped.keys.minOrNull()
 
-                if (validEvents.isEmpty()) {
-                    _uiState.value = DashboardUiState(isLoading = false)
-                    return@collectLatest
-                }
+            val nextEvents = if (earliestDate != null) grouped[earliestDate].orEmpty() else emptyList()
+            val days = if (earliestDate != null) ChronoUnit.DAYS.between(today, earliestDate) else 0L
 
-                val grouped = validEvents.groupBy { it.collectionDate }
-                val earliestDate = grouped.keys.minOrNull()
+            val remainingGrouped = grouped.filterKeys { it != earliestDate }
 
-                val nextEvents = if (earliestDate != null) grouped[earliestDate].orEmpty() else emptyList()
-                val days = if (earliestDate != null) ChronoUnit.DAYS.between(today, earliestDate) else 0L
-
-                val remainingGrouped = grouped.filterKeys { it != earliestDate }
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    nextCollectionDate = earliestDate,
-                    nextCollectionEvents = nextEvents,
-                    daysRemaining = days,
-                    upcomingEventsGrouped = remainingGrouped
-                )
-            }
+            DashboardUiState(
+                isLoading = false,
+                nextCollectionDate = earliestDate,
+                nextCollectionEvents = nextEvents,
+                daysRemaining = days,
+                upcomingEventsGrouped = remainingGrouped,
+                putOutBins = putOutBins,
+                allBins = allBins,
+                userMessage = userMessage
+            )
         }
-    }
+    }.stateIn(
+        scope = viewModelScope,
+        started = started,
+        initialValue = DashboardUiState(isLoading = true)
+    )
 
     /**
      * Toggles whether a specific bin has been put out on the kerb for collection using [ToggleBinPutOutUseCase].
@@ -91,19 +103,17 @@ class DashboardViewModel(
         val result = toggleBinPutOutUseCase(
             binId = binId,
             binName = binName,
-            currentPutOutBins = _uiState.value.putOutBins
+            currentPutOutBins = _putOutBins.value
         )
 
-        _uiState.value = _uiState.value.copy(
-            putOutBins = result.updatedPutOutBins,
-            userMessage = result.userMessage
-        )
+        _putOutBins.value = result.updatedPutOutBins
+        _userMessage.value = result.userMessage
     }
 
     /**
      * Clears the current user message snackbar notification.
      */
     fun dismissUserMessage() {
-        _uiState.value = _uiState.value.copy(userMessage = null)
+        _userMessage.value = null
     }
 }

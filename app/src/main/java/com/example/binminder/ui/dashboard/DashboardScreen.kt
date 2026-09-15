@@ -1,13 +1,12 @@
 package com.example.binminder.ui.dashboard
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,13 +20,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CalendarToday
+import com.example.binminder.data.model.Bin
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EventAvailable
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
@@ -51,25 +50,30 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.painterResource
+import com.example.binminder.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CollectionEvent
+import com.example.binminder.ui.dialogs.CalendarExportDialog
 import com.example.binminder.ui.theme.BinMinderTheme
+import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.formatBritishDate
 import com.example.binminder.ui.theme.formatRelativeDays
-import com.example.binminder.ui.theme.getContrastingTextColor
-import com.example.binminder.ui.theme.parseBinColor
+import com.example.binminder.util.CalendarExportUtils
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -86,7 +90,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.userMessage) {
@@ -121,21 +125,42 @@ fun DashboardContent(
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showCalendarExportDialog by remember { mutableStateOf(false) }
+
+    if (showCalendarExportDialog) {
+        CalendarExportDialog(
+            bins = uiState.allBins,
+            onDismissRequest = { showCalendarExportDialog = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "BinMinder",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_app_logo),
+                            contentDescription = "BinDay Logo",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
                         )
-                        Text(
-                            text = "UK Council Collection Schedule",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = "BinDay: Reminders",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "UK Council Collection Schedule",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -189,13 +214,39 @@ fun DashboardContent(
 
                     if (uiState.upcomingEventsGrouped.isNotEmpty()) {
                         item {
-                            Text(
-                                text = "Upcoming Timetable",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Upcoming Timetable",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if (uiState.allBins.any { it.isEnabled }) {
+                                    OutlinedButton(
+                                        onClick = { showCalendarExportDialog = true },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.CalendarToday,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Add to Calendar",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         items(
@@ -385,9 +436,6 @@ fun HeroBinItemCard(
     onMarkPutOut: () -> Unit,
     onViewBinDetail: () -> Unit
 ) {
-    val binBgColor = parseBinColor(event.binColorHex, event.presetColor)
-    val binTextColor = getContrastingTextColor(binBgColor)
-
     Card(
         onClick = onViewBinDetail,
         shape = RoundedCornerShape(16.dp),
@@ -402,20 +450,20 @@ fun HeroBinItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Bin Colour Swatch
+                // Dual-Colour Visual Bin Swatch
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .background(binBgColor)
-                        .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = null,
-                        tint = binTextColor,
-                        modifier = Modifier.size(20.dp)
+                    WheelieBinVisualSwatch(
+                        presetColor = event.presetColor,
+                        colorHex = event.binColorHex,
+                        lidPresetColor = event.lidPresetColor,
+                        lidColorHex = event.lidColorHex,
+                        size = 32.dp
                     )
                 }
 
@@ -532,15 +580,13 @@ fun UpcomingDateSection(
 }
 
 /**
- * Compact card composable displaying a future collection event.
+ * Compact card composable displaying a future collection event with dual-colour swatch.
  */
 @Composable
 fun UpcomingEventCard(
     event: CollectionEvent,
     onClick: () -> Unit
 ) {
-    val binBgColor = parseBinColor(event.binColorHex, event.presetColor)
-
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -554,19 +600,20 @@ fun UpcomingEventCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left colour strip / circle
+            // Dual-colour swatch icon
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(binBgColor),
+                    .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = null,
-                    tint = getContrastingTextColor(binBgColor),
-                    modifier = Modifier.size(18.dp)
+                WheelieBinVisualSwatch(
+                    presetColor = event.presetColor,
+                    colorHex = event.binColorHex,
+                    lidPresetColor = event.lidPresetColor,
+                    lidColorHex = event.lidColorHex,
+                    size = 28.dp
                 )
             }
 
@@ -687,10 +734,11 @@ fun DashboardScreenPreview() {
             binName = "General Waste",
             binColorHex = BinColor.BLACK.defaultHex,
             presetColor = BinColor.BLACK,
+            lidPresetColor = BinColor.BLUE,
             collectionDate = sampleDate,
             originalDate = sampleDate,
             isBankHolidayAdjusted = false,
-            customNote = "Put lid down"
+            customNote = "Black bin with blue lid"
         ),
         CollectionEvent(
             binId = 2,

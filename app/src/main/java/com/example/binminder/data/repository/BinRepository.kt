@@ -61,6 +61,11 @@ interface BinRepository {
     suspend fun ensureDefaultBinsInitialized()
 
     /**
+     * Clears existing bins and restores the standard UK council wheelie bin profile.
+     */
+    suspend fun restoreStandardBins()
+
+    /**
      * Reactive flow of user notification and reminder preferences.
      */
     val notificationSettings: Flow<NotificationSettings>

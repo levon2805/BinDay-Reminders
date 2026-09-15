@@ -166,6 +166,61 @@ class BinRepositoryImpl(
     }
 
     /**
+     * Clears existing bins and restores the standard UK council wheelie bin profile on [Dispatchers.IO].
+     */
+    override suspend fun restoreStandardBins(): Unit = withContext(Dispatchers.IO) {
+        binDao.deleteAllBins()
+        val today = LocalDate.now()
+        val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
+        val defaultBins = listOf(
+            Bin(
+                name = "General Waste",
+                colorHex = BinColor.BLACK.defaultHex,
+                presetColor = BinColor.BLACK,
+                recurrence = RecurrenceType.FORTNIGHTLY,
+                startDate = currentMonday,
+                customNote = "Black bin for non-recyclable household waste. Put out by 7:00 AM.",
+                isEnabled = true,
+                adjustForBankHolidays = true
+            ),
+            Bin(
+                name = "Dry Mixed Recycling",
+                colorHex = BinColor.BLUE.defaultHex,
+                presetColor = BinColor.BLUE,
+                recurrence = RecurrenceType.FORTNIGHTLY,
+                startDate = currentMonday.plusWeeks(1),
+                customNote = "Blue bin for paper, cardboard, plastic bottles, and cans.",
+                isEnabled = true,
+                adjustForBankHolidays = true
+            ),
+            Bin(
+                name = "Garden Waste",
+                colorHex = BinColor.GREEN.defaultHex,
+                presetColor = BinColor.GREEN,
+                recurrence = RecurrenceType.FORTNIGHTLY,
+                startDate = currentMonday,
+                customNote = "Green bin for grass cuttings, leaves, and small hedge trimmings.",
+                isEnabled = true,
+                adjustForBankHolidays = true
+            ),
+            Bin(
+                name = "Food Waste Caddy",
+                colorHex = BinColor.BROWN.defaultHex,
+                presetColor = BinColor.BROWN,
+                recurrence = RecurrenceType.WEEKLY,
+                startDate = currentMonday,
+                customNote = "Brown caddy for food scraps and kitchen leftovers.",
+                isEnabled = true,
+                adjustForBankHolidays = true
+            )
+        )
+
+        binDao.insertBins(defaultBins.map { BinEntity.fromDomain(it) })
+        triggerScheduleUpdate()
+    }
+
+    /**
      * Observes notification preference changes as a flow on [Dispatchers.IO].
      */
     override val notificationSettings: Flow<NotificationSettings> =
@@ -222,16 +277,21 @@ class BinRepositoryImpl(
         val firstPrimaryDay = today.with(TemporalAdjusters.nextOrSame(primaryDay))
 
         val newBins = binSetups.filter { it.isEnabled }.map { setup ->
-            val startDate = if (setup.startNextWeek && setup.recurrence == RecurrenceType.FORTNIGHTLY) {
-                firstPrimaryDay.plusWeeks(1)
+            val binDay = setup.collectionDay ?: primaryDay
+            val firstBinDay = today.with(TemporalAdjusters.nextOrSame(binDay))
+
+            val startDate = if (setup.startNextWeek && setup.recurrence.intervalWeeks > 1) {
+                firstBinDay.plusWeeks(1)
             } else {
-                firstPrimaryDay
+                firstBinDay
             }
 
             Bin(
                 name = setup.displayName,
                 colorHex = setup.presetColor.defaultHex,
                 presetColor = setup.presetColor,
+                lidColorHex = setup.lidPresetColor?.defaultHex,
+                lidPresetColor = setup.lidPresetColor,
                 recurrence = setup.recurrence,
                 startDate = startDate,
                 customNote = setup.customNote,

@@ -1,17 +1,14 @@
 package com.example.binminder.data.model
 
-import java.time.DayOfWeek
-
 /**
- * Result model representing an auto-detected UK council waste collection timetable.
+ * Result model representing an identified UK council from a postcode lookup.
  * 
- * Includes the local council name, admin district, primary collection day, and
- * pre-filled bin setups based on postcode lookup.
+ * Provides the council name and a web search URL so users can find their
+ * actual collection schedule on their council's website.
  */
 data class CouncilScheduleResult(
     val postcode: String,
     val councilName: String,
     val adminDistrict: String,
-    val primaryCollectionDay: DayOfWeek,
-    val binSetups: List<OnboardingBinSetup>
+    val councilWebSearchUrl: String
 )

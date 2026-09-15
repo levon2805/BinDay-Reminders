@@ -4,15 +4,16 @@ import com.example.binminder.data.model.CouncilScheduleResult
 import com.example.binminder.data.repository.CouncilLookupRepository
 
 /**
- * Domain Use Case for resolving local UK council bin collection schedules via postcode or council query.
+ * Domain Use Case for identifying a user's local UK council via postcode lookup.
  *
- * Right handy for auto-completing timetable defaults during onboarding without any fuss!
+ * Returns the council name and a web search URL so users can find their
+ * actual bin collection schedule on their council's website.
  */
 class LookupCouncilScheduleUseCase(
     private val repository: CouncilLookupRepository
 ) {
     /**
-     * Looks up council timetable options for a given UK postcode or council query string.
+     * Looks up council identification for a given UK postcode query string.
      */
     suspend operator fun invoke(postcodeOrQuery: String): Result<CouncilScheduleResult> {
         return repository.lookupPostcode(postcodeOrQuery)

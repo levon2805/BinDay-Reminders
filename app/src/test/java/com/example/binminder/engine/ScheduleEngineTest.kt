@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 class ScheduleEngineTest {
 
@@ -121,5 +122,125 @@ class ScheduleEngineTest {
         )
 
         assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testStartDateFarInPastFastForwardsCorrectly() {
+        // Bin started 10 years ago (2015-01-05 Monday)
+        val oldBin = Bin(
+            id = 10,
+            name = "General Waste",
+            colorHex = BinColor.BLACK.defaultHex,
+            presetColor = BinColor.BLACK,
+            recurrence = RecurrenceType.FORTNIGHTLY,
+            startDate = LocalDate.of(2015, 1, 5),
+            isEnabled = true,
+            adjustForBankHolidays = false
+        )
+
+        val startDate = LocalDate.of(2025, 5, 1)
+        val endDate = LocalDate.of(2025, 5, 31)
+
+        val events = ScheduleEngine.generateEventsForBin(oldBin, startDate, endDate)
+
+        // 2015-01-05 + N * 14 days should align with Mon May 12, 2025 and Mon May 26, 2025
+        assertTrue("Events should be generated", events.isNotEmpty())
+        for (event in events) {
+            val daysBetween = ChronoUnit.DAYS.between(LocalDate.of(2015, 1, 5), event.collectionDate)
+            assertEquals("Event date must be exactly a multiple of 14 days from startDate", 0L, daysBetween % 14L)
+        }
+    }
+
+    @Test
+    fun testStartDateFarInFutureReturnsEmptyIfOutRange() {
+        val futureBin = Bin(
+            id = 11,
+            name = "Future Bin",
+            colorHex = BinColor.BLUE.defaultHex,
+            presetColor = BinColor.BLUE,
+            recurrence = RecurrenceType.WEEKLY,
+            startDate = LocalDate.of(2030, 1, 1),
+            isEnabled = true
+        )
+
+        val events = ScheduleEngine.generateEventsForBin(
+            futureBin,
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(2025, 12, 31)
+        )
+
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testStartDateAfterEndDateReturnsEmpty() {
+        val bin = Bin(
+            id = 12,
+            name = "Test Bin",
+            colorHex = BinColor.BLACK.defaultHex,
+            presetColor = BinColor.BLACK,
+            recurrence = RecurrenceType.WEEKLY,
+            startDate = LocalDate.of(2025, 5, 1),
+            isEnabled = true
+        )
+
+        val events = ScheduleEngine.generateEventsForBin(
+            bin,
+            LocalDate.of(2025, 5, 31),
+            LocalDate.of(2025, 5, 1)
+        )
+
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testLeapYearFeb29Schedule() {
+        // Leap year 2028: Feb 29 is Tuesday
+        val leapBin = Bin(
+            id = 13,
+            name = "Recycling",
+            colorHex = BinColor.BLUE.defaultHex,
+            presetColor = BinColor.BLUE,
+            recurrence = RecurrenceType.FORTNIGHTLY,
+            startDate = LocalDate.of(2028, 2, 15),
+            isEnabled = true,
+            adjustForBankHolidays = false
+        )
+
+        val events = ScheduleEngine.generateEventsForBin(
+            leapBin,
+            LocalDate.of(2028, 2, 1),
+            LocalDate.of(2028, 3, 31)
+        )
+
+        val eventDates = events.map { it.collectionDate }
+        assertTrue(eventDates.contains(LocalDate.of(2028, 2, 15)))
+        assertTrue(eventDates.contains(LocalDate.of(2028, 2, 29))) // Feb 29 leap day!
+        assertTrue(eventDates.contains(LocalDate.of(2028, 3, 14)))
+    }
+
+    @Test
+    fun testYearBoundaryScheduleGeneration() {
+        val bin = Bin(
+            id = 14,
+            name = "General Waste",
+            colorHex = BinColor.BLACK.defaultHex,
+            presetColor = BinColor.BLACK,
+            recurrence = RecurrenceType.WEEKLY,
+            startDate = LocalDate.of(2025, 12, 15),
+            isEnabled = true,
+            adjustForBankHolidays = true
+        )
+
+        val events = ScheduleEngine.generateEventsForBin(
+            bin,
+            LocalDate.of(2025, 12, 20),
+            LocalDate.of(2026, 1, 10)
+        )
+
+        assertTrue(events.isNotEmpty())
+        val dates = events.map { it.collectionDate }
+        assertTrue(dates.any { it.year == 2025 })
+        assertTrue(dates.any { it.year == 2026 })
     }
 }

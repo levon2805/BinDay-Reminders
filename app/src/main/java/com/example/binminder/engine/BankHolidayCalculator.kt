@@ -32,6 +32,9 @@ data class BankHolidayShiftPreview(
  */
 object BankHolidayCalculator {
 
+    const val SUBSTITUTE_BANK_HOLIDAY_EXPLANATION =
+        "In the UK, when Christmas, Boxing Day, or New Year's Day falls on a weekend, the UK government designates the following Monday/Tuesday as the official 'Substitute' Bank Holiday."
+
     /**
      * Calculates Easter Sunday for a given year using the Anonymous Gregorian algorithm.
      */

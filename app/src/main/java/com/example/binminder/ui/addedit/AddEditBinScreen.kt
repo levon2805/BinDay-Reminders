@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.Notes
@@ -30,9 +31,9 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EventRepeat
-import androidx.compose.material.icons.rounded.Notes
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import com.example.binminder.ui.theme.ColorPickerDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,11 +60,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.ui.theme.BinMinderTheme
+import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.formatBritishDate
 import com.example.binminder.ui.theme.getContrastingTextColor
 import com.example.binminder.ui.theme.parseBinColor
@@ -92,7 +95,7 @@ fun AddEditBinScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(binId) {
@@ -118,6 +121,8 @@ fun AddEditBinScreen(
         onNameChange = { viewModel.onNameChange(it) },
         onPresetColorSelected = { viewModel.onPresetColorSelected(it) },
         onCustomHexChange = { viewModel.onCustomHexChange(it) },
+        onLidPresetColorSelected = { viewModel.onLidPresetColorSelected(it) },
+        onCustomLidHexChange = { viewModel.onCustomLidHexChange(it) },
         onRecurrenceSelected = { viewModel.onRecurrenceSelected(it) },
         onStartDateSelected = { viewModel.onStartDateSelected(it) },
         onAdjustForBankHolidaysChange = { viewModel.onAdjustForBankHolidaysChange(it) },
@@ -139,6 +144,8 @@ fun AddEditBinContent(
     onNameChange: (String) -> Unit,
     onPresetColorSelected: (BinColor) -> Unit,
     onCustomHexChange: (String) -> Unit,
+    onLidPresetColorSelected: (BinColor?) -> Unit,
+    onCustomLidHexChange: (String) -> Unit,
     onRecurrenceSelected: (RecurrenceType) -> Unit,
     onStartDateSelected: (LocalDate) -> Unit,
     onAdjustForBankHolidaysChange: (Boolean) -> Unit,
@@ -148,6 +155,9 @@ fun AddEditBinContent(
     modifier: Modifier = Modifier
 ) {
     var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showBodyColorPickerDialog by remember { mutableStateOf(false) }
+    var showLidColorPickerDialog by remember { mutableStateOf(false) }
+    var showBankHolidayInfoDialog by remember { mutableStateOf(false) }
 
     val isEditing = uiState.binId != null && uiState.binId != 0L
     val screenTitle = if (isEditing) "Edit Bin" else "Add Bin"
@@ -186,11 +196,13 @@ fun AddEditBinContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Live Bin Preview Card Header
+            // Live Bin Preview Card Header with Dual-Colour Swatch
             BinPreviewHeader(
                 name = uiState.name.ifBlank { "Bin Name" },
                 presetColor = uiState.presetColor,
                 colorHex = uiState.colorHex,
+                lidPresetColor = uiState.lidPresetColor,
+                lidColorHex = uiState.lidColorHex,
                 recurrence = uiState.recurrence,
                 startDate = uiState.startDate
             )
@@ -215,7 +227,7 @@ fun AddEditBinContent(
                 )
             }
 
-            // 2. Council Colour Preset Grid
+            // 2. Bin Body Colour Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -228,7 +240,7 @@ fun AddEditBinContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Council Colour",
+                        text = "Bin Body Colour",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -243,26 +255,144 @@ fun AddEditBinContent(
                         ColorSwatchChip(
                             preset = preset,
                             isSelected = uiState.presetColor == preset,
-                            onSelected = { onPresetColorSelected(preset) }
+                            onSelected = {
+                                if (preset == BinColor.CUSTOM) {
+                                    showBodyColorPickerDialog = true
+                                } else {
+                                    onPresetColorSelected(preset)
+                                }
+                            }
                         )
                     }
                 }
 
                 if (uiState.isCustomColor) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = uiState.colorHex,
-                        onValueChange = onCustomHexChange,
-                        label = { Text("Custom Colour Hex Code") },
-                        placeholder = { Text("#009688") },
-                        singleLine = true,
+                    Card(
                         shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        ),
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Custom Colour: ${uiState.colorHex.uppercase()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            OutlinedButton(
+                                onClick = { showBodyColorPickerDialog = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.Palette, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Colour Picker")
+                            }
+                        }
+                    }
                 }
             }
 
-            // 3. Collection Schedule / Recurrence
+            // 3. Bin Lid Colour Section (Dual-Colour Support)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Palette,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Bin Lid Colour (Dual-Colour)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Select distinct lid colour if your council bin has a different lid",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // "Same as Body" option
+                    FilterChip(
+                        selected = uiState.lidPresetColor == null,
+                        onClick = { onLidPresetColorSelected(null) },
+                        label = { Text("Same as Body (Solid)") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    )
+
+                    BinColor.entries.forEach { preset ->
+                        ColorSwatchChip(
+                            preset = preset,
+                            isSelected = uiState.lidPresetColor == preset,
+                            onSelected = {
+                                if (preset == BinColor.CUSTOM) {
+                                    showLidColorPickerDialog = true
+                                } else {
+                                    onLidPresetColorSelected(preset)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                if (uiState.isCustomLidColor) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Custom Lid Colour: ${(uiState.lidColorHex ?: "").uppercase()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            OutlinedButton(
+                                onClick = { showLidColorPickerDialog = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.Palette, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Colour Picker")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Collection Schedule / Recurrence
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Collection Recurrence",
@@ -294,7 +424,7 @@ fun AddEditBinContent(
                 }
             }
 
-            // 4. First Collection Date Picker
+            // 5. First Collection Date Picker
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "First Collection Date",
@@ -362,7 +492,7 @@ fun AddEditBinContent(
                 }
             }
 
-            // 5. Bank Holiday Shift Toggle
+            // 6. Bank Holiday Shift Toggle
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -389,12 +519,25 @@ fun AddEditBinContent(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(
-                                text = "Adjust for UK Bank Holidays",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Adjust for UK Bank Holidays",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                IconButton(
+                                    onClick = { showBankHolidayInfoDialog = true },
+                                    modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = "Bank Holiday Auto-Adjustment Info",
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Automatically shifts collection by +1 day when on a Bank Holiday",
                                 style = MaterialTheme.typography.bodySmall,
@@ -410,7 +553,7 @@ fun AddEditBinContent(
                 }
             }
 
-            // 6. Custom Instructions / Notes
+            // 7. Custom Instructions / Notes
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = "Kerbside Instructions / Notes",
@@ -433,7 +576,7 @@ fun AddEditBinContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 7. Save / Cancel Action Buttons
+            // 8. Save / Cancel Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -499,16 +642,81 @@ fun AddEditBinContent(
             DatePicker(state = datePickerState)
         }
     }
+
+    if (showBodyColorPickerDialog) {
+        ColorPickerDialog(
+            title = "Select Bin Body Colour",
+            initialColorHex = uiState.colorHex,
+            initialPresetColor = uiState.presetColor,
+            onColorSelected = { preset, hex ->
+                if (preset == BinColor.CUSTOM) {
+                    onCustomHexChange(hex)
+                } else {
+                    onPresetColorSelected(preset)
+                }
+            },
+            onDismissRequest = { showBodyColorPickerDialog = false }
+        )
+    }
+
+    if (showLidColorPickerDialog) {
+        ColorPickerDialog(
+            title = "Select Bin Lid Colour",
+            initialColorHex = uiState.lidColorHex ?: uiState.colorHex,
+            initialPresetColor = uiState.lidPresetColor,
+            onColorSelected = { preset, hex ->
+                if (preset == BinColor.CUSTOM) {
+                    onCustomLidHexChange(hex)
+                } else {
+                    onLidPresetColorSelected(preset)
+                }
+            },
+            onDismissRequest = { showLidColorPickerDialog = false }
+        )
+    }
+
+    if (showBankHolidayInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showBankHolidayInfoDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.EventRepeat,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Bank Holiday Auto-Adjustment",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "When a UK bank holiday falls in a collection week, BinDay automatically shifts this bin's collection date by +1 day (e.g. Friday ➔ Saturday).",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showBankHolidayInfoDialog = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
 }
 
 /**
- * Live card preview showing the current bin name and selected colour swatch.
+ * Live card preview showing the current bin name and selected dual-colour swatch.
  */
 @Composable
 fun BinPreviewHeader(
     name: String,
     presetColor: BinColor,
     colorHex: String,
+    lidPresetColor: BinColor?,
+    lidColorHex: String?,
     recurrence: RecurrenceType,
     startDate: LocalDate
 ) {
@@ -529,16 +737,17 @@ fun BinPreviewHeader(
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(52.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.25f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = null,
-                    tint = binTextColor,
-                    modifier = Modifier.size(28.dp)
+                WheelieBinVisualSwatch(
+                    presetColor = presetColor,
+                    colorHex = colorHex,
+                    lidPresetColor = lidPresetColor,
+                    lidColorHex = lidColorHex,
+                    size = 38.dp
                 )
             }
 
@@ -551,8 +760,11 @@ fun BinPreviewHeader(
                     fontWeight = FontWeight.Bold,
                     color = binTextColor
                 )
+                val lidDesc = if (lidPresetColor != null && lidPresetColor != presetColor && lidPresetColor != BinColor.CUSTOM) {
+                    " (${presetColor.displayName} Bin with ${lidPresetColor.displayName} Lid)"
+                } else ""
                 Text(
-                    text = "${recurrence.displayName} • Starts ${formatBritishDate(startDate, includeDayOfWeek = false)}",
+                    text = "${recurrence.displayName}$lidDesc • Starts ${formatBritishDate(startDate, includeDayOfWeek = false)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = binTextColor.copy(alpha = 0.85f)
                 )
@@ -619,15 +831,18 @@ fun AddEditBinScreenPreview() {
             uiState = AddEditBinUiState(
                 name = "General Waste",
                 presetColor = BinColor.BLACK,
+                lidPresetColor = BinColor.BLUE,
                 recurrence = RecurrenceType.FORTNIGHTLY,
                 startDate = LocalDate.now(),
                 adjustForBankHolidays = true,
-                customNote = "Black wheelie bin for non-recyclable household waste"
+                customNote = "Black wheelie bin with blue lid"
             ),
             snackbarHostState = remember { SnackbarHostState() },
             onNameChange = {},
             onPresetColorSelected = {},
             onCustomHexChange = {},
+            onLidPresetColorSelected = {},
+            onCustomLidHexChange = {},
             onRecurrenceSelected = {},
             onStartDateSelected = {},
             onAdjustForBankHolidaysChange = {},

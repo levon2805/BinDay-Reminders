@@ -1,5 +1,6 @@
 package com.example.binminder.data.service
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -83,6 +84,8 @@ class CouncilLookupServiceImpl(
                     incode = incode
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             null
         }

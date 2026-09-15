@@ -57,12 +57,33 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(1, state.currentStep)
         assertEquals("", state.postcodeOrCouncil)
-        assertEquals(DayOfWeek.MONDAY, state.primaryCollectionDay)
+        assertNull(state.primaryCollectionDay)
         assertEquals(4, state.binSetups.size)
         assertFalse(state.isCompleted)
         assertFalse(state.isSearchingPostcode)
-        assertNull(state.detectedSchedule)
+        assertNull(state.detectedCouncil)
         assertNull(state.searchError)
+    }
+
+    @Test
+    fun testResetStateResetsToStep1() {
+        viewModel.goToStep(4)
+        assertEquals(4, viewModel.uiState.value.currentStep)
+
+        viewModel.resetState()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.currentStep)
+        assertEquals("", state.postcodeOrCouncil)
+        assertNull(state.primaryCollectionDay)
+        assertFalse(state.isCompleted)
+    }
+
+    @Test
+    fun testInitialDayIsNullRequiresSelection() {
+        assertNull(viewModel.uiState.value.primaryCollectionDay)
+        assertFalse("Should not be able to advance from Step 2 without day selection",
+            viewModel.uiState.value.primaryCollectionDay != null)
     }
 
     @Test
@@ -81,7 +102,33 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun testSearchPostcodeTimetableSuccess() = runTest {
+    fun testCanAdvanceFromStep2RequiresDay() {
+        viewModel.goToStep(2)
+
+        assertFalse("Cannot advance without day selected", viewModel.canAdvanceFromCurrentStep())
+
+        viewModel.setPrimaryCollectionDay(DayOfWeek.WEDNESDAY)
+
+        assertTrue("Can advance after day selected", viewModel.canAdvanceFromCurrentStep())
+    }
+
+    @Test
+    fun testCanAdvanceFromOtherStepsAlwaysTrue() {
+        // Step 1 — always advanceable
+        assertEquals(1, viewModel.uiState.value.currentStep)
+        assertTrue(viewModel.canAdvanceFromCurrentStep())
+
+        // Step 3 — always advanceable
+        viewModel.goToStep(3)
+        assertTrue(viewModel.canAdvanceFromCurrentStep())
+
+        // Step 4 — always advanceable
+        viewModel.goToStep(4)
+        assertTrue(viewModel.canAdvanceFromCurrentStep())
+    }
+
+    @Test
+    fun testSearchPostcodeIdentifiesCouncil() = runTest {
         viewModel.setPostcodeOrCouncil("M1 1AE")
         viewModel.searchPostcodeTimetable()
 
@@ -90,19 +137,31 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isSearchingPostcode)
         assertNull(state.searchError)
-        assertNotNull(state.detectedSchedule)
-        assertEquals("Manchester City Council", state.detectedSchedule?.councilName)
+        assertNotNull(state.detectedCouncil)
+        assertEquals("Manchester City Council", state.detectedCouncil?.councilName)
         assertEquals("Manchester City Council", state.postcodeOrCouncil)
-        assertEquals(DayOfWeek.TUESDAY, state.primaryCollectionDay)
-        assertEquals(4, state.binSetups.size)
-
-        state.binSetups.forEach { bin ->
-            assertFalse("Bin display name '${bin.displayName}' should not contain '('", bin.displayName.contains("("))
-        }
     }
 
     @Test
-    fun testSearchPostcodeTimetableFailure() = runTest {
+    fun testSearchPostcodeDoesNotPopulateBinsOrDay() = runTest {
+        viewModel.setPostcodeOrCouncil("M1 1AE")
+        viewModel.searchPostcodeTimetable()
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        // Day should remain null — user must set it themselves
+        assertNull(state.primaryCollectionDay)
+        // Bins should still be the defaults, not overwritten by lookup
+        assertEquals(4, state.binSetups.size)
+        assertEquals("General Waste", state.binSetups[0].binType)
+        assertEquals("Dry Mixed Recycling", state.binSetups[1].binType)
+        assertEquals("Garden Waste", state.binSetups[2].binType)
+        assertEquals("Food Waste Caddy", state.binSetups[3].binType)
+    }
+
+    @Test
+    fun testSearchPostcodeFailure() = runTest {
         fakeCouncilRepository.shouldSucceed = false
         viewModel.setPostcodeOrCouncil("INVALID_POSTCODE")
         viewModel.searchPostcodeTimetable()
@@ -111,53 +170,21 @@ class OnboardingViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.isSearchingPostcode)
-        assertNull(state.detectedSchedule)
-        assertEquals("Could not auto-detect timetable. Switching to guided setup.", state.searchError)
+        assertNull(state.detectedCouncil)
+        assertEquals("Could not identify your council. You can still set up your bins manually.", state.searchError)
     }
 
     @Test
-    fun testSetPrimaryCollectionDayUpdatesDetectedSchedule() = runTest {
+    fun testCouncilWebSearchUrl() = runTest {
         viewModel.setPostcodeOrCouncil("M1 1AE")
         viewModel.searchPostcodeTimetable()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(DayOfWeek.TUESDAY, viewModel.uiState.value.primaryCollectionDay)
-        assertEquals(DayOfWeek.TUESDAY, viewModel.uiState.value.detectedSchedule?.primaryCollectionDay)
-
-        viewModel.setPrimaryCollectionDay(DayOfWeek.THURSDAY)
-
-        assertEquals(DayOfWeek.THURSDAY, viewModel.uiState.value.primaryCollectionDay)
-        assertEquals(DayOfWeek.THURSDAY, viewModel.uiState.value.detectedSchedule?.primaryCollectionDay)
-    }
-
-    @Test
-    fun testAcceptAndApplyDetectedTimetableWithCustomDay() = runTest {
-        viewModel.setPostcodeOrCouncil("M1 1AE")
-        viewModel.searchPostcodeTimetable()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        viewModel.setPrimaryCollectionDay(DayOfWeek.THURSDAY)
-
-        var onCompleteCalled = false
-        viewModel.acceptAndApplyDetectedTimetable {
-            onCompleteCalled = true
-        }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertTrue(onCompleteCalled)
-        assertTrue(fakeRepository.completeSetupCalled)
-        assertEquals("Manchester City Council", fakeRepository.savedPostcode)
-        assertEquals(DayOfWeek.THURSDAY, fakeRepository.savedPrimaryDay)
-    }
-
-    @Test
-    fun testContinueToGuidedSetup() {
-        viewModel.continueToGuidedSetup()
-
-        val state = viewModel.uiState.value
-        assertNull(state.searchError)
-        assertEquals(2, state.currentStep)
+        val url = viewModel.getCouncilWebSearchUrl()
+        assertNotNull(url)
+        assertTrue("URL should be a Google search", url!!.startsWith("https://www.google.com/search?q="))
+        assertTrue("URL should mention the council", url.contains("Manchester"))
     }
 
     @Test
@@ -189,39 +216,65 @@ class OnboardingViewModelTest {
         viewModel.setBinColor("Garden Waste", BinColor.PURPLE)
         val gardenBin = viewModel.uiState.value.binSetups.first { it.binType == "Garden Waste" }
         assertEquals(BinColor.PURPLE, gardenBin.presetColor)
+        assertEquals("Standard purple wheelie bin for garden waste", gardenBin.customNote)
     }
 
     @Test
-    fun testSetFortnightlyThisWeekBinSwapsCycle() = runTest {
-        viewModel.setPostcodeOrCouncil("M1 1AE")
-        viewModel.searchPostcodeTimetable()
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun testSetBinLidColorCustomisation() {
+        viewModel.setBinLidColor("General Waste", BinColor.RED)
+        val generalBin = viewModel.uiState.value.binSetups.first { it.binType == "General Waste" }
+        assertEquals(BinColor.RED, generalBin.lidPresetColor)
+        assertEquals("Standard black wheelie bin with red lid for general waste", generalBin.customNote)
+    }
 
-        // Initial setup from FakeCouncilLookupRepository:
+    @Test
+    fun testDynamicNotesSync_OnBodyAndLidColorChange() {
+        // Change body color to BLACK and lid color to BLUE for Dry Mixed Recycling
+        viewModel.setBinColor("Dry Mixed Recycling", BinColor.BLACK)
+        viewModel.setBinLidColor("Dry Mixed Recycling", BinColor.BLUE)
+
+        val recyclingBin = viewModel.uiState.value.binSetups.first { it.binType == "Dry Mixed Recycling" }
+        assertEquals("Standard black wheelie bin with blue lid for dry mixed recycling", recyclingBin.customNote)
+    }
+
+    @Test
+    fun testEditableBinNamesInSetupWizard() {
+        viewModel.renameBin("Food Waste Caddy", "Food Waste Bin")
+        val foodBin = viewModel.uiState.value.binSetups.first { it.binType == "Food Waste Caddy" }
+        assertEquals("Food Waste Bin", foodBin.displayName)
+        assertEquals("Standard brown wheelie bin for food waste bin", foodBin.customNote)
+
+        viewModel.renameBin("Dry Mixed Recycling", "Recycling Box")
+        val recyclingBin = viewModel.uiState.value.binSetups.first { it.binType == "Dry Mixed Recycling" }
+        assertEquals("Recycling Box", recyclingBin.displayName)
+        assertEquals("Standard blue wheelie bin for recycling box", recyclingBin.customNote)
+    }
+
+    @Test
+    fun testSetFortnightlyThisWeekBinSwapsCycle() {
+        // Default bin setups:
         // General Waste: FORTNIGHTLY, startNextWeek = false
-        // Recycling: FORTNIGHTLY, startNextWeek = true
-        // Glass & Plastics: FORTNIGHTLY, startNextWeek = true
-        // Food & Garden: WEEKLY, startNextWeek = false
+        // Dry Mixed Recycling: FORTNIGHTLY, startNextWeek = true
+        // Garden Waste: FORTNIGHTLY, startNextWeek = false
+        // Food Waste Caddy: WEEKLY, startNextWeek = false
 
         val initialGeneral = viewModel.uiState.value.binSetups.first { it.binType == "General Waste" }
-        val initialRecycling = viewModel.uiState.value.binSetups.first { it.binType == "Recycling" }
+        val initialRecycling = viewModel.uiState.value.binSetups.first { it.binType == "Dry Mixed Recycling" }
         assertFalse(initialGeneral.startNextWeek)
         assertTrue(initialRecycling.startNextWeek)
 
         // User selects Recycling to go out THIS week
-        viewModel.setFortnightlyThisWeekBin("Recycling")
+        viewModel.setFortnightlyThisWeekBin("Dry Mixed Recycling")
 
         val updatedGeneral = viewModel.uiState.value.binSetups.first { it.binType == "General Waste" }
-        val updatedRecycling = viewModel.uiState.value.binSetups.first { it.binType == "Recycling" }
-        val updatedGlass = viewModel.uiState.value.binSetups.first { it.binType == "Glass & Plastics" }
+        val updatedRecycling = viewModel.uiState.value.binSetups.first { it.binType == "Dry Mixed Recycling" }
 
         assertTrue("General Waste should now start next week", updatedGeneral.startNextWeek)
         assertFalse("Recycling should now start this week", updatedRecycling.startNextWeek)
-        assertFalse("Glass & Plastics should now start this week", updatedGlass.startNextWeek)
 
         // Selecting Recycling again (already this week) should leave cycle unchanged
-        viewModel.setFortnightlyThisWeekBin("Recycling")
-        assertFalse(viewModel.uiState.value.binSetups.first { it.binType == "Recycling" }.startNextWeek)
+        viewModel.setFortnightlyThisWeekBin("Dry Mixed Recycling")
+        assertFalse(viewModel.uiState.value.binSetups.first { it.binType == "Dry Mixed Recycling" }.startNextWeek)
     }
 
     @Test
@@ -253,6 +306,22 @@ class OnboardingViewModelTest {
         assertEquals(DayOfWeek.THURSDAY, fakeRepository.savedPrimaryDay)
     }
 
+    @Test
+    fun testCompleteSetupDefaultsDayToMondayIfNull() = runTest {
+        viewModel.setPostcodeOrCouncil("Test Council")
+        // Don't set a day — should default to Monday
+
+        var callbackCalled = false
+        viewModel.completeSetup {
+            callbackCalled = true
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(callbackCalled)
+        assertEquals(DayOfWeek.MONDAY, fakeRepository.savedPrimaryDay)
+    }
+
     private class FakeCouncilLookupRepository : CouncilLookupRepository {
         var shouldSucceed = true
 
@@ -263,13 +332,7 @@ class OnboardingViewModelTest {
                         postcode = postcodeOrQuery,
                         councilName = "Manchester City Council",
                         adminDistrict = "Manchester",
-                        primaryCollectionDay = DayOfWeek.TUESDAY,
-                        binSetups = listOf(
-                            OnboardingBinSetup("General Waste", "General Waste", BinColor.GREY, RecurrenceType.FORTNIGHTLY, isEnabled = true, startNextWeek = false),
-                            OnboardingBinSetup("Recycling", "Paper & Cardboard", BinColor.BLUE, RecurrenceType.FORTNIGHTLY, isEnabled = true, startNextWeek = true),
-                            OnboardingBinSetup("Glass & Plastics", "Glass & Cans", BinColor.BROWN, RecurrenceType.FORTNIGHTLY, isEnabled = true, startNextWeek = true),
-                            OnboardingBinSetup("Food & Garden", "Organics", BinColor.GREEN, RecurrenceType.WEEKLY, isEnabled = true, startNextWeek = false)
-                        )
+                        councilWebSearchUrl = "https://www.google.com/search?q=Manchester+City+Council+bin+collection+schedule"
                     )
                 )
             } else {
@@ -292,6 +355,7 @@ class OnboardingViewModelTest {
         override suspend fun deleteBin(bin: Bin) {}
         override suspend fun clearAllBins() {}
         override suspend fun ensureDefaultBinsInitialized() {}
+        override suspend fun restoreStandardBins() {}
 
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}

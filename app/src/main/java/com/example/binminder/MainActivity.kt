@@ -6,9 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.ui.navigation.MainScreen
 import com.example.binminder.ui.theme.BinMinderTheme
@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         val repository = appContainer.binRepository
 
         setContent {
-            val themeMode by repository.themeMode.collectAsState(initial = AppThemeMode.SYSTEM)
+            val themeMode by repository.themeMode.collectAsStateWithLifecycle(initialValue = AppThemeMode.SYSTEM)
             val darkTheme = when (themeMode) {
                 AppThemeMode.LIGHT -> false
                 AppThemeMode.DARK -> true

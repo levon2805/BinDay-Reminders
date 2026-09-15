@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EventRepeat
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -48,13 +50,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -62,6 +67,7 @@ import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.ui.theme.BinMinderTheme
+import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.formatBritishDate
 import com.example.binminder.ui.theme.formatRecurrenceLabel
 import com.example.binminder.ui.theme.getContrastingTextColor
@@ -79,8 +85,11 @@ fun BinListScreen(
     onNavigateToEditBin: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    var showResetDialog by remember { mutableStateOf(false) }
+    var showBankHolidayInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
@@ -97,10 +106,79 @@ fun BinListScreen(
         onCancelDeleteBin = { viewModel.cancelDeleteBin() },
         onConfirmDeleteBin = { viewModel.confirmDeleteBin() },
         onResetDefaultBins = { viewModel.resetDefaultBins() },
+        onResetClick = { showResetDialog = true },
+        onShowBankHolidayInfo = { showBankHolidayInfoDialog = true },
         onNavigateToAddBin = onNavigateToAddBin,
         onNavigateToEditBin = onNavigateToEditBin,
         modifier = modifier
     )
+
+    // Reset Confirmation Dialogue
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = {
+                Text(
+                    text = "Reset Bins & Timetable?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This will reset your current wheelie bins and timetable, opening the guided Setup Wizard so you can enter a new postcode or update your schedule. Are you sure you want to proceed?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetDialog = false
+                        viewModel.resetTimetableAndAddress(context)
+                    }
+                ) {
+                    Text("Reset & Start Setup")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Bank Holiday Auto-Adjustment Info Dialogue
+    if (showBankHolidayInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showBankHolidayInfoDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.EventRepeat,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Bank Holiday Auto-Adjustment",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "When a UK bank holiday falls in a collection week, BinDay automatically shifts this bin's collection date by +1 day (e.g. Friday ➔ Saturday).",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showBankHolidayInfoDialog = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
 }
 
 /**
@@ -116,6 +194,8 @@ fun BinListContent(
     onCancelDeleteBin: () -> Unit,
     onConfirmDeleteBin: () -> Unit,
     onResetDefaultBins: () -> Unit,
+    onResetClick: () -> Unit,
+    onShowBankHolidayInfo: () -> Unit,
     onNavigateToAddBin: () -> Unit,
     onNavigateToEditBin: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -138,10 +218,19 @@ fun BinListContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onResetDefaultBins) {
-                        Icon(
-                            imageVector = Icons.Rounded.Refresh,
-                            contentDescription = "Restore Default UK Bins"
+                    Button(
+                        onClick = onResetClick,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = "Reset",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 },
@@ -197,7 +286,8 @@ fun BinListContent(
                             bin = bin,
                             onToggleEnabled = { onToggleBinEnabled(bin) },
                             onEditClicked = { onNavigateToEditBin(bin.id) },
-                            onDeleteClicked = { onRequestDeleteBin(bin) }
+                            onDeleteClicked = { onRequestDeleteBin(bin) },
+                            onShowBankHolidayInfo = onShowBankHolidayInfo
                         )
                     }
 
@@ -247,18 +337,16 @@ fun BinListContent(
 }
 
 /**
- * Card component displaying individual bin details, colour swatches, and action controls.
+ * Card component displaying individual bin details, dual-colour swatches, and action controls.
  */
 @Composable
 fun WheelieBinCard(
     bin: Bin,
     onToggleEnabled: () -> Unit,
     onEditClicked: () -> Unit,
-    onDeleteClicked: () -> Unit
+    onDeleteClicked: () -> Unit,
+    onShowBankHolidayInfo: () -> Unit
 ) {
-    val binBgColor = parseBinColor(bin.colorHex, bin.presetColor)
-    val binTextColor = getContrastingTextColor(binBgColor)
-
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
@@ -280,24 +368,25 @@ fun WheelieBinCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Colour Swatch & Bin Name
+                // Dual-Colour Visual Swatch & Bin Name
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
-                            .background(if (bin.isEnabled) binBgColor else binBgColor.copy(alpha = 0.4f))
-                            .border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape),
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = null,
-                            tint = if (bin.isEnabled) binTextColor else binTextColor.copy(alpha = 0.5f),
-                            modifier = Modifier.size(24.dp)
+                        WheelieBinVisualSwatch(
+                            presetColor = bin.presetColor,
+                            colorHex = bin.colorHex,
+                            lidPresetColor = bin.lidPresetColor,
+                            lidColorHex = bin.lidColorHex,
+                            size = 36.dp,
+                            isEnabled = bin.isEnabled
                         )
                     }
 
@@ -333,7 +422,14 @@ fun WheelieBinCard(
 
                         Spacer(modifier = Modifier.height(2.dp))
 
-                        // Recurrence label in British English
+                        // Descriptive colour & recurrence label
+                        Text(
+                            text = bin.colorDisplayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
                         Text(
                             text = formatRecurrenceLabel(bin.recurrence, bin.startDate),
                             style = MaterialTheme.typography.bodySmall,
@@ -374,26 +470,16 @@ fun WheelieBinCard(
                 }
 
                 if (bin.adjustForBankHolidays) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    IconButton(
+                        onClick = onShowBankHolidayInfo,
+                        modifier = Modifier.size(28.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.EventRepeat,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Bank Holiday Shift",
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Bank Holiday Auto-Adjustment Info",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -528,9 +614,10 @@ fun BinListScreenPreview() {
             name = "General Waste",
             colorHex = BinColor.BLACK.defaultHex,
             presetColor = BinColor.BLACK,
+            lidPresetColor = BinColor.BLUE,
             recurrence = RecurrenceType.FORTNIGHTLY,
             startDate = LocalDate.now(),
-            customNote = "Black bin for general non-recyclables",
+            customNote = "Black bin with blue lid",
             isEnabled = true,
             adjustForBankHolidays = true
         ),
@@ -559,6 +646,8 @@ fun BinListScreenPreview() {
             onCancelDeleteBin = {},
             onConfirmDeleteBin = {},
             onResetDefaultBins = {},
+            onResetClick = {},
+            onShowBankHolidayInfo = {},
             onNavigateToAddBin = {},
             onNavigateToEditBin = {}
         )

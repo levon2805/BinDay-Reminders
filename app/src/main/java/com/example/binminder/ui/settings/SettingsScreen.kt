@@ -3,6 +3,7 @@ package com.example.binminder.ui.settings
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +18,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EventRepeat
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
@@ -35,9 +42,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -53,11 +62,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.example.binminder.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,9 +80,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.NotificationSettings
+import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
+import com.example.binminder.ui.dialogs.CalendarExportDialog
 import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.formatBritishDate
+import com.example.binminder.util.CalendarExportUtils
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -84,7 +100,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onReRunSetupWizard: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -176,9 +192,21 @@ fun SettingsContent(
     modifier: Modifier = Modifier
 ) {
     val settings = uiState.notificationSettings
+    val context = LocalContext.current
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var customTimeEveningBefore by remember { mutableStateOf(settings.reminderEveningBefore) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showRestoreDefaultsDialog by remember { mutableStateOf(false) }
+    var isBankHolidaysExpanded by remember { mutableStateOf(false) }
+    var showSubstituteHolidayInfoDialog by remember { mutableStateOf(false) }
+    var showCalendarExportDialog by remember { mutableStateOf(false) }
+
+    if (showCalendarExportDialog) {
+        CalendarExportDialog(
+            bins = uiState.allBins,
+            onDismissRequest = { showCalendarExportDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -416,7 +444,193 @@ fun SettingsContent(
                 }
             }
 
-            // Section 2: UK Bank Holiday Schedule Preview & Council Controls
+            // Section 2: UK Bank Holiday Shift Rules (Expandable)
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isBankHolidaysExpanded = !isBankHolidaysExpanded }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.EventRepeat,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "UK Bank Holiday Shift Rules",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        IconButton(onClick = { isBankHolidaysExpanded = !isBankHolidaysExpanded }) {
+                            Icon(
+                                imageVector = if (isBankHolidaysExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = if (isBankHolidaysExpanded) "Collapse" else "Expand"
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Collections delayed by +1 day after a bank holiday",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    if (isBankHolidaysExpanded) {
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Substitute Bank Holidays: In the UK, when Christmas, Boxing Day, or New Year's Day falls on a weekend, the UK government designates the following Monday/Tuesday as the official 'Substitute' Bank Holiday.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (uiState.bankHolidayPreviews.isEmpty()) {
+                            Text(
+                                text = "No upcoming bank holiday shifts found.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            val grouped = uiState.bankHolidayPreviews.groupBy { it.holidayName to it.holidayDate }
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                grouped.forEach { (holidayKey, shifts) ->
+                                    val (holidayName, holidayDate) = holidayKey
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        tonalElevation = 1.dp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            ) {
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("dd MMM")),
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("yyyy")),
+                                                        style = MaterialTheme.typography.labelSmall
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = holidayName,
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    if (holidayName.contains("Substitute", ignoreCase = true) || holidayName.contains("Boxing Day", ignoreCase = true)) {
+                                                        IconButton(
+                                                            onClick = { showSubstituteHolidayInfoDialog = true },
+                                                            modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Outlined.Info,
+                                                                contentDescription = "Substitute Bank Holiday Info",
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                shifts.forEach { shift ->
+                                                    Text(
+                                                        text = "${shift.binName}: ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1d)",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 3: Council & Timetable Management
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -430,97 +644,58 @@ fun SettingsContent(
                         modifier = Modifier.padding(bottom = 12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.EventRepeat,
+                            imageVector = Icons.Rounded.Refresh,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "UK Bank Holiday Schedule Preview",
+                            text = "Council & Timetable Management",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Text(
-                        text = "Official UK Bank Holiday Adjustments",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Collection dates shift automatically by +1 day during bank holiday weeks. Below is a preview of upcoming bank holiday schedule shifts:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (uiState.bankHolidayPreviews.isEmpty()) {
-                        Text(
-                            text = "No upcoming bank holiday shifts found.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        val grouped = uiState.bankHolidayPreviews.groupBy { it.holidayName to it.holidayDate }
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            grouped.forEach { (holidayKey, shifts) ->
-                                val (holidayName, holidayDate) = holidayKey
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 1.dp,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = holidayName,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Text(
-                                                text = formatBritishDate(holidayDate),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        shifts.forEach { shift ->
-                                            Text(
-                                                text = "• ${shift.binName}: Collection day shifts from ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1 day shift)",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
+                    OutlinedButton(
+                        onClick = {
+                            val activeBins = uiState.allBins.filter { it.isEnabled }
+                            if (activeBins.isNotEmpty()) {
+                                showCalendarExportDialog = true
+                            } else {
+                                Toast.makeText(context, "No active bins found to export.", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Outlined.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Add Bins to Calendar", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedButton(
-                        onClick = onResetDefaultBins,
+                        onClick = { showRestoreDefaultsDialog = true },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restore Default UK Council Bins")
+                        Text("Restore Standard UK Bins")
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Resets your bins to default UK council profiles (General, Recycling, Garden, Food Caddy).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
                         onClick = { showResetDialog = true },
@@ -534,10 +709,19 @@ fun SettingsContent(
                         Icon(imageVector = Icons.Rounded.RestartAlt, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Reset Timetable & Move Address",
+                            text = "Reset Timetable & Address",
                             fontWeight = FontWeight.Bold
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Clears all bins and restarts the guided setup wizard to enter a new postcode or address.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
                 }
             }
 
@@ -622,15 +806,16 @@ fun SettingsContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_app_logo),
+                            contentDescription = "BinDay Logo",
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "About BinMinder",
+                            text = "About BinDay: Reminders",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -639,7 +824,7 @@ fun SettingsContent(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "BinMinder v1.0.0",
+                        text = "BinDay v1.0.0",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -653,6 +838,48 @@ fun SettingsContent(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Restore Standard Bins Confirmation Dialogue
+    if (showRestoreDefaultsDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreDefaultsDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Restore Standard UK Bins?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This will replace your current bins with the standard UK council profile (General Waste, Recycling, Garden, Food Caddy). Your postcode settings will be kept.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRestoreDefaultsDialog = false
+                        onResetDefaultBins()
+                    }
+                ) {
+                    Text("Restore Bins")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDefaultsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Reset Timetable Confirmation Dialogue
@@ -739,6 +966,38 @@ fun SettingsContent(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     TimePicker(state = timePickerState)
+                }
+            }
+        )
+    }
+
+    // Substitute Bank Holiday Info Dialogue
+    if (showSubstituteHolidayInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showSubstituteHolidayInfoDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Substitute Bank Holidays",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = BankHolidayCalculator.SUBSTITUTE_BANK_HOLIDAY_EXPLANATION,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showSubstituteHolidayInfoDialog = false }) {
+                    Text("Got it")
                 }
             }
         )

@@ -5,16 +5,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.Bin
+import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.ResetTimetableUseCase
 import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
+import com.example.binminder.engine.ScheduleEngine
 import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -31,6 +35,9 @@ data class SettingsUiState(
     val notificationSettings: NotificationSettings = NotificationSettings(),
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val bankHolidayPreviews: List<BankHolidayShiftPreview> = emptyList(),
+    val nextCollectionDate: LocalDate? = null,
+    val nextCollectionEvents: List<CollectionEvent> = emptyList(),
+    val allBins: List<Bin> = emptyList(),
     val isLoading: Boolean = true,
     val userMessage: String? = null
 )
@@ -42,44 +49,48 @@ data class SettingsUiState(
  */
 class SettingsViewModel(
     private val repository: BinRepository,
-    private val resetTimetableUseCase: ResetTimetableUseCase = ResetTimetableUseCase(repository)
+    private val resetTimetableUseCase: ResetTimetableUseCase = ResetTimetableUseCase(repository),
+    started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _userMessage = MutableStateFlow<String?>(null)
 
     /**
      * Observable flow of the settings UI state.
      */
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<SettingsUiState> = combine(
+        repository.notificationSettings,
+        repository.themeMode,
+        repository.allBins,
+        _userMessage
+    ) { settings, themeMode, bins, userMessage ->
+        val previews = generateBankHolidayShiftPreviews(bins)
+        val activeBins = bins.filter { it.isEnabled }
+        val allEvents = ScheduleEngine.generateCollectionEvents(
+            bins = activeBins,
+            startDate = LocalDate.now(),
+            endDate = LocalDate.now().plusWeeks(6)
+        )
+        val nextDate = allEvents.minOfOrNull { it.collectionDate }
+        val nextEvents = if (nextDate != null) {
+            allEvents.filter { it.collectionDate == nextDate }
+        } else emptyList()
 
-    init {
-        viewModelScope.launch {
-            repository.notificationSettings.collectLatest { settings ->
-                _uiState.value = _uiState.value.copy(
-                    notificationSettings = settings,
-                    themeMode = settings.themeMode,
-                    isLoading = false
-                )
-            }
-        }
-
-        viewModelScope.launch {
-            repository.themeMode.collectLatest { mode ->
-                _uiState.value = _uiState.value.copy(
-                    themeMode = mode
-                )
-            }
-        }
-
-        viewModelScope.launch {
-            repository.allBins.collectLatest { bins ->
-                val previews = generateBankHolidayShiftPreviews(bins)
-                _uiState.value = _uiState.value.copy(
-                    bankHolidayPreviews = previews
-                )
-            }
-        }
-    }
+        SettingsUiState(
+            notificationSettings = settings,
+            themeMode = themeMode,
+            bankHolidayPreviews = previews,
+            nextCollectionDate = nextDate,
+            nextCollectionEvents = nextEvents,
+            allBins = bins,
+            isLoading = false,
+            userMessage = userMessage
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = started,
+        initialValue = SettingsUiState(isLoading = true)
+    )
 
     /**
      * Updates the active theme mode preference.
@@ -87,9 +98,7 @@ class SettingsViewModel(
     fun setThemeMode(themeMode: AppThemeMode) {
         viewModelScope.launch {
             repository.setThemeMode(themeMode)
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Theme updated to ${themeMode.label}."
-            )
+            _userMessage.value = "Theme updated to ${themeMode.label}."
         }
     }
 
@@ -98,10 +107,11 @@ class SettingsViewModel(
      */
     fun toggleReminders(enabled: Boolean, context: Context) {
         viewModelScope.launch {
-            val updated = _uiState.value.notificationSettings.copy(reminderEnabled = enabled)
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(reminderEnabled = enabled)
             repository.updateNotificationSettings(updated)
             val status = if (enabled) "enabled" else "disabled"
-            _uiState.value = _uiState.value.copy(userMessage = "Collection reminders $status.")
+            _userMessage.value = "Collection reminders $status."
         }
     }
 
@@ -110,16 +120,15 @@ class SettingsViewModel(
      */
     fun updateReminderSchedule(time: LocalTime, eveningBefore: Boolean) {
         viewModelScope.launch {
-            val updated = _uiState.value.notificationSettings.copy(
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(
                 reminderTime = time,
                 reminderEveningBefore = eveningBefore
             )
             repository.updateNotificationSettings(updated)
             val formattedTime = time.format(DateTimeFormatter.ofPattern("HH:mm"))
             val timingText = if (eveningBefore) "Evening before" else "Morning of collection"
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Reminder schedule updated to $formattedTime ($timingText)."
-            )
+            _userMessage.value = "Reminder schedule updated to $formattedTime ($timingText)."
         }
     }
 
@@ -128,32 +137,25 @@ class SettingsViewModel(
      */
     fun sendTestNotification(context: Context) {
         NotificationScheduler.sendImmediateTestNotification(context)
-        _uiState.value = _uiState.value.copy(
-            userMessage = "Test notification sent! Check your notification panel."
-        )
+        _userMessage.value = "Test notification sent! Check your notification panel."
     }
 
     /**
-     * Restores default UK council bin profiles.
+     * Restores standard UK council bin profiles.
      */
     fun resetDefaultBins() {
         viewModelScope.launch {
-            repository.ensureDefaultBinsInitialized()
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Restored default UK wheelie bin profiles."
-            )
+            repository.restoreStandardBins()
+            _userMessage.value = "Restored standard UK wheelie bin profile."
         }
     }
 
     /**
      * Clears all saved bins and resets onboarding state to allow entering a new address via [ResetTimetableUseCase].
      */
-    fun resetTimetableAndAddress(context: Context, onComplete: () -> Unit) {
+    fun resetTimetableAndAddress(context: Context, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             resetTimetableUseCase(context)
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Timetable and address reset."
-            )
             onComplete()
         }
     }
@@ -164,9 +166,6 @@ class SettingsViewModel(
     fun resetOnboarding(onComplete: () -> Unit) {
         viewModelScope.launch {
             resetTimetableUseCase()
-            _uiState.value = _uiState.value.copy(
-                userMessage = "Resetting setup wizard..."
-            )
             onComplete()
         }
     }
@@ -175,16 +174,14 @@ class SettingsViewModel(
      * Handles notification permission denial feedback.
      */
     fun onNotificationPermissionDenied() {
-        _uiState.value = _uiState.value.copy(
-            userMessage = "Notification permission is required to receive bin reminders."
-        )
+        _userMessage.value = "Notification permission is required to receive bin reminders."
     }
 
     /**
      * Clears current user message notification string.
      */
     fun dismissUserMessage() {
-        _uiState.value = _uiState.value.copy(userMessage = null)
+        _userMessage.value = null
     }
 
     private fun generateBankHolidayShiftPreviews(bins: List<Bin>): List<BankHolidayShiftPreview> {

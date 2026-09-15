@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -41,7 +42,10 @@ class SettingsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeRepository = FakeBinRepository()
-        viewModel = SettingsViewModel(fakeRepository)
+        viewModel = SettingsViewModel(
+            repository = fakeRepository,
+            started = SharingStarted.Eagerly
+        )
     }
 
     @After
@@ -73,6 +77,15 @@ class SettingsViewModelTest {
         assertTrue("onComplete callback should be called", onCompleteCalled)
         assertTrue("clearAllBins should be called on repository", fakeRepository.clearAllBinsCalled)
         assertFalse("onboardingCompleted should be set to false", fakeRepository.onboardingCompletedState)
+    }
+
+    @Test
+    fun testRestoreStandardBins() = runTest {
+        viewModel.resetDefaultBins()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(fakeRepository.restoreStandardBinsCalled)
+        assertEquals("Restored standard UK wheelie bin profile.", viewModel.uiState.value.userMessage)
     }
 
     @Test
@@ -217,6 +230,11 @@ class SettingsViewModelTest {
 
         override suspend fun ensureDefaultBinsInitialized() {}
 
+        var restoreStandardBinsCalled = false
+        override suspend fun restoreStandardBins() {
+            restoreStandardBinsCalled = true
+        }
+
         override val notificationSettings: Flow<NotificationSettings> = settingsFlow
 
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {
@@ -229,6 +247,8 @@ class SettingsViewModelTest {
         override suspend fun setThemeMode(themeMode: AppThemeMode) {
             themeModeState = themeMode
             themeModeFlow.value = themeMode
+            notificationSettingsState = notificationSettingsState.copy(themeMode = themeMode)
+            settingsFlow.value = notificationSettingsState
         }
 
         override val onboardingCompleted: Flow<Boolean> = onboardingFlow

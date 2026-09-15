@@ -11,6 +11,8 @@ import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.data.repository.CouncilLookupRepository
 import com.example.binminder.data.repository.CouncilLookupRepositoryImpl
 import com.example.binminder.domain.LookupCouncilScheduleUseCase
+import com.example.binminder.ui.theme.getDefaultNotes
+import com.example.binminder.ui.theme.isDefaultNote
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,15 +22,15 @@ import java.time.DayOfWeek
 import java.time.LocalTime
 
 /**
- * UI state holding setup wizard progress, detected timetable results, and bin configuration parameters.
+ * UI state holding setup wizard progress, identified council info, and bin configuration parameters.
  */
 data class OnboardingUiState(
     val currentStep: Int = 1,
     val postcodeOrCouncil: String = "",
     val isSearchingPostcode: Boolean = false,
-    val detectedSchedule: CouncilScheduleResult? = null,
+    val detectedCouncil: CouncilScheduleResult? = null,
     val searchError: String? = null,
-    val primaryCollectionDay: DayOfWeek = DayOfWeek.MONDAY,
+    val primaryCollectionDay: DayOfWeek? = null,
     val binSetups: List<OnboardingBinSetup> = defaultBinSetups(),
     val reminderTime: LocalTime = LocalTime.of(19, 0),
     val reminderEveningBefore: Boolean = true,
@@ -46,44 +48,50 @@ fun defaultBinSetups(): List<OnboardingBinSetup> = listOf(
         binType = "General Waste",
         displayName = "General Waste",
         presetColor = BinColor.BLACK,
+        lidPresetColor = null,
         recurrence = RecurrenceType.FORTNIGHTLY,
         isEnabled = true,
         startNextWeek = false,
-        customNote = "Black bin for non-recyclable household waste."
+        customNote = getDefaultNotes("General Waste", BinColor.BLACK, null)
     ),
     OnboardingBinSetup(
         binType = "Dry Mixed Recycling",
         displayName = "Dry Mixed Recycling",
         presetColor = BinColor.BLUE,
+        lidPresetColor = null,
         recurrence = RecurrenceType.FORTNIGHTLY,
         isEnabled = true,
         startNextWeek = true,
-        customNote = "Blue bin for paper, cardboard, plastic bottles, and cans."
+        customNote = getDefaultNotes("Dry Mixed Recycling", BinColor.BLUE, null)
     ),
     OnboardingBinSetup(
         binType = "Garden Waste",
         displayName = "Garden Waste",
         presetColor = BinColor.GREEN,
+        lidPresetColor = null,
         recurrence = RecurrenceType.FORTNIGHTLY,
         isEnabled = true,
         startNextWeek = false,
-        customNote = "Green bin for grass cuttings and garden clippings."
+        customNote = getDefaultNotes("Garden Waste", BinColor.GREEN, null)
     ),
     OnboardingBinSetup(
         binType = "Food Waste Caddy",
         displayName = "Food Waste Caddy",
         presetColor = BinColor.BROWN,
+        lidPresetColor = null,
         recurrence = RecurrenceType.WEEKLY,
         isEnabled = true,
         startNextWeek = false,
-        customNote = "Brown caddy for kitchen food leftovers."
+        customNote = getDefaultNotes("Food Waste Caddy", BinColor.BROWN, null)
     )
 )
 
 /**
- * ViewModel managing postcode search, timetable auto-detection, and setup wizard steps.
+ * ViewModel managing postcode council identification and guided manual setup wizard steps.
  *
- * Uses domain use case [LookupCouncilScheduleUseCase] for council schedule auto-completion.
+ * Uses domain use case [LookupCouncilScheduleUseCase] to identify the user's local council
+ * and provide a link to their council's website. Bin configuration is always done manually
+ * by the user through the guided setup steps.
  */
 class OnboardingViewModel(
     private val repository: BinRepository,
@@ -99,25 +107,33 @@ class OnboardingViewModel(
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     /**
+     * Resets the onboarding wizard state back to Step 1 (Postcode Search).
+     */
+    fun resetState() {
+        _uiState.value = OnboardingUiState()
+    }
+
+    /**
      * Updates the postcode or council search input string.
      */
     fun setPostcodeOrCouncil(query: String) {
         _uiState.update { state ->
-            val updatedSchedule = if (state.detectedSchedule != null &&
-                query != state.detectedSchedule.councilName &&
-                query != state.detectedSchedule.postcode
-            ) null else state.detectedSchedule
+            val updatedCouncil = if (state.detectedCouncil != null &&
+                query != state.detectedCouncil.councilName &&
+                query != state.detectedCouncil.postcode
+            ) null else state.detectedCouncil
 
             state.copy(
                 postcodeOrCouncil = query,
-                detectedSchedule = updatedSchedule,
+                detectedCouncil = updatedCouncil,
                 searchError = null
             )
         }
     }
 
     /**
-     * Performs a postcode lookup to auto-detect local council collection schedules via [LookupCouncilScheduleUseCase].
+     * Performs a postcode lookup to identify the local council and generate a website search URL.
+     * Does not populate bin setups or collection day — those are set manually by the user.
      */
     fun searchPostcodeTimetable() {
         val query = _uiState.value.postcodeOrCouncil.trim()
@@ -128,14 +144,12 @@ class OnboardingViewModel(
         viewModelScope.launch {
             val result = lookupCouncilScheduleUseCase(query)
             if (result.isSuccess) {
-                val schedule = result.getOrNull()!!
+                val council = result.getOrNull()!!
                 _uiState.update { state ->
                     state.copy(
                         isSearchingPostcode = false,
-                        detectedSchedule = schedule,
-                        postcodeOrCouncil = schedule.councilName,
-                        primaryCollectionDay = schedule.primaryCollectionDay,
-                        binSetups = schedule.binSetups,
+                        detectedCouncil = council,
+                        postcodeOrCouncil = council.councilName,
                         searchError = null
                     )
                 }
@@ -143,8 +157,8 @@ class OnboardingViewModel(
                 _uiState.update { state ->
                     state.copy(
                         isSearchingPostcode = false,
-                        detectedSchedule = null,
-                        searchError = "Could not auto-detect timetable. Switching to guided setup."
+                        detectedCouncil = null,
+                        searchError = "Could not identify your council. You can still set up your bins manually."
                     )
                 }
             }
@@ -152,25 +166,10 @@ class OnboardingViewModel(
     }
 
     /**
-     * Accepts detected council schedule options and completes onboarding immediately.
+     * Returns the council website search URL if a council has been identified, or null.
      */
-    fun acceptAndApplyDetectedTimetable(onComplete: () -> Unit) {
-        completeSetup(onComplete)
-    }
-
-    /**
-     * Advances to bin customisation steps to adjust auto-detected defaults.
-     */
-    fun customiseDetectedTimetable() {
-        nextStep()
-    }
-
-    /**
-     * Continues into guided setup wizard if auto-detection fails.
-     */
-    fun continueToGuidedSetup() {
-        _uiState.update { it.copy(searchError = null) }
-        nextStep()
+    fun getCouncilWebSearchUrl(): String? {
+        return _uiState.value.detectedCouncil?.councilWebSearchUrl
     }
 
     /**
@@ -178,11 +177,7 @@ class OnboardingViewModel(
      */
     fun setPrimaryCollectionDay(day: DayOfWeek) {
         _uiState.update { state ->
-            val updatedSchedule = state.detectedSchedule?.copy(primaryCollectionDay = day)
-            state.copy(
-                primaryCollectionDay = day,
-                detectedSchedule = updatedSchedule
-            )
+            state.copy(primaryCollectionDay = day)
         }
     }
 
@@ -223,14 +218,92 @@ class OnboardingViewModel(
     }
 
     /**
-     * Updates the chosen colour preset for a specific bin setup.
+     * Updates the chosen body colour preset for a specific bin setup, syncing default notes if unmodified.
      */
     fun setBinColor(binType: String, color: BinColor) {
         _uiState.update { state ->
             val updated = state.binSetups.map { setup ->
-                if (setup.binType == binType) setup.copy(presetColor = color) else setup
+                if (setup.binType == binType) {
+                    val newNote = if (isDefaultNote(setup.customNote, setup.displayName)) {
+                        getDefaultNotes(setup.displayName, color, setup.lidPresetColor)
+                    } else {
+                        setup.customNote
+                    }
+                    setup.copy(presetColor = color, customNote = newNote)
+                } else setup
             }
             state.copy(binSetups = updated)
+        }
+    }
+
+    /**
+     * Updates the chosen lid colour preset for a specific bin setup, syncing default notes if unmodified.
+     */
+    fun setBinLidColor(binType: String, lidColor: BinColor?) {
+        _uiState.update { state ->
+            val updated = state.binSetups.map { setup ->
+                if (setup.binType == binType) {
+                    val newNote = if (isDefaultNote(setup.customNote, setup.displayName)) {
+                        getDefaultNotes(setup.displayName, setup.presetColor, lidColor)
+                    } else {
+                        setup.customNote
+                    }
+                    setup.copy(lidPresetColor = lidColor, customNote = newNote)
+                } else setup
+            }
+            state.copy(binSetups = updated)
+        }
+    }
+
+    /**
+     * Updates the collection day for a specific bin setup.
+     */
+    fun setBinCollectionDay(binType: String, day: DayOfWeek) {
+        _uiState.update { state ->
+            val updated = state.binSetups.map { setup ->
+                if (setup.binType == binType) setup.copy(collectionDay = day) else setup
+            }
+            state.copy(binSetups = updated)
+        }
+    }
+
+    /**
+     * Renames a bin's display name, syncing default notes if unmodified.
+     */
+    fun renameBin(binType: String, newName: String) {
+        _uiState.update { state ->
+            val updated = state.binSetups.map { setup ->
+                if (setup.binType == binType) {
+                    val newNote = if (isDefaultNote(setup.customNote, setup.displayName)) {
+                        getDefaultNotes(newName, setup.presetColor, setup.lidPresetColor)
+                    } else {
+                        setup.customNote
+                    }
+                    setup.copy(displayName = newName, customNote = newNote)
+                } else setup
+            }
+            state.copy(binSetups = updated)
+        }
+    }
+
+    /**
+     * Adds a new custom bin setup to the list.
+     */
+    fun addCustomBin() {
+        _uiState.update { state ->
+            val customBinCount = state.binSetups.count { it.binType.startsWith("Custom Bin") }
+            val newBinName = "Custom Bin ${customBinCount + 1}"
+            val newBin = OnboardingBinSetup(
+                binType = newBinName,
+                displayName = newBinName,
+                presetColor = BinColor.BLACK,
+                lidPresetColor = null,
+                recurrence = RecurrenceType.FORTNIGHTLY,
+                isEnabled = true,
+                startNextWeek = false,
+                customNote = getDefaultNotes(newBinName, BinColor.BLACK, null)
+            )
+            state.copy(binSetups = state.binSetups + newBin)
         }
     }
 
@@ -300,6 +373,18 @@ class OnboardingViewModel(
     }
 
     /**
+     * Returns whether the user can advance past the current step.
+     * Step 2 requires a collection day to be selected.
+     */
+    fun canAdvanceFromCurrentStep(): Boolean {
+        val state = _uiState.value
+        return when (state.currentStep) {
+            2 -> state.primaryCollectionDay != null
+            else -> true
+        }
+    }
+
+    /**
      * Finalises onboarding choices, populates initial database bins, and schedules notifications.
      */
     fun completeSetup(onComplete: () -> Unit) {
@@ -314,7 +399,7 @@ class OnboardingViewModel(
 
             repository.completeOnboardingSetup(
                 postcodeOrCouncil = _uiState.value.postcodeOrCouncil,
-                primaryDay = _uiState.value.primaryCollectionDay,
+                primaryDay = _uiState.value.primaryCollectionDay ?: DayOfWeek.MONDAY,
                 binSetups = _uiState.value.binSetups,
                 notificationSettings = settings
             )

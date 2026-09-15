@@ -1,15 +1,11 @@
 package com.example.binminder.domain
 
-import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CouncilScheduleResult
-import com.example.binminder.data.model.OnboardingBinSetup
-import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.data.repository.CouncilLookupRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.DayOfWeek
 
 class LookupCouncilScheduleUseCaseTest {
 
@@ -19,10 +15,7 @@ class LookupCouncilScheduleUseCaseTest {
             postcode = "M1 1AE",
             councilName = "Manchester City Council",
             adminDistrict = "Manchester",
-            primaryCollectionDay = DayOfWeek.TUESDAY,
-            binSetups = listOf(
-                OnboardingBinSetup("General Waste", "General Waste", BinColor.GREY, RecurrenceType.FORTNIGHTLY, isEnabled = true, startNextWeek = false)
-            )
+            councilWebSearchUrl = "https://www.google.com/search?q=Manchester+City+Council+bin+collection+schedule"
         )
 
         val fakeRepo = object : CouncilLookupRepository {
