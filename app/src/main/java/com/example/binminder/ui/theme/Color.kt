@@ -3,34 +3,21 @@ package com.example.binminder.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Expressive British Eco-Green colour palette definitions for M3 themes.
+ * BinDay Brand Identity Color Tokens
+ * Derived from the BinDay app icon: deep emerald green, vibrant leaf green, clean white, and dark charcoal.
  */
-val GreenPrimaryLight = Color(0xFF006C4C)
-val GreenOnPrimaryLight = Color(0xFFFFFFFF)
-val GreenPrimaryContainerLight = Color(0xFF80F8C2)
-val GreenOnPrimaryContainerLight = Color(0xFF002114)
 
-val SlateSecondaryLight = Color(0xFF4C6358)
-val SlateOnSecondaryLight = Color(0xFFFFFFFF)
-val SlateSecondaryContainerLight = Color(0xFFCEE9DA)
-val SlateOnSecondaryContainerLight = Color(0xFF092016)
+// Core Brand Colors
+val BrandDeepEmerald = Color(0xFF046A38) // Deep emerald green
+val BrandVibrantLeaf = Color(0xFF00D053) // Vibrant leaf green
+val BrandWhite = Color(0xFFFFFFFF)       // Clean white
+val BrandOffWhite = Color(0xFFF8F9FA)    // Clean off-white
+val BrandCharcoal = Color(0xFF212529)    // Dark charcoal
+val BrandCharcoalDark = Color(0xFF121212) // Obsidian / darker charcoal
 
-val GoldTertiaryLight = Color(0xFF795900)
-val GoldOnTertiaryLight = Color(0xFFFFFFFF)
-val GoldTertiaryContainerLight = Color(0xFFFFDF9E)
-val GoldOnTertiaryContainerLight = Color(0xFF261A00)
+// Common Border Colors
+val NeoBorderLight = BrandDeepEmerald
+val NeoBorderDark = Color(0xFF343A40)
 
-val GreenPrimaryDark = Color(0xFF62DBA7)
-val GreenOnPrimaryDark = Color(0xFF003826)
-val GreenPrimaryContainerDark = Color(0xFF005238)
-val GreenOnPrimaryContainerDark = Color(0xFF80F8C2)
-
-val SlateSecondaryDark = Color(0xFFB2CCBE)
-val SlateOnSecondaryDark = Color(0xFF1E352B)
-val SlateSecondaryContainerDark = Color(0xFF354B41)
-val SlateOnSecondaryContainerDark = Color(0xFFCEE9DA)
-
-val GoldTertiaryDark = Color(0xFFF8BD47)
-val GoldOnTertiaryDark = Color(0xFF402D00)
-val GoldTertiaryContainerDark = Color(0xFF5C4300)
-val GoldOnTertiaryContainerDark = Color(0xFFFFDF9E)
+// Feedback Colors
+val BrandError = Color(0xFFE63946) // Bold red for destructive actions

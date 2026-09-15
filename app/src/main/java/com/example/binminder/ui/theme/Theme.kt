@@ -8,41 +8,91 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.AppThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = GreenPrimaryDark,
-    onPrimary = GreenOnPrimaryDark,
-    primaryContainer = GreenPrimaryContainerDark,
-    onPrimaryContainer = GreenOnPrimaryContainerDark,
-    secondary = SlateSecondaryDark,
-    onSecondary = SlateOnSecondaryDark,
-    secondaryContainer = SlateSecondaryContainerDark,
-    onSecondaryContainer = SlateOnSecondaryContainerDark,
-    tertiary = GoldTertiaryDark,
-    onTertiary = GoldOnTertiaryDark,
-    tertiaryContainer = GoldTertiaryContainerDark,
-    onTertiaryContainer = GoldOnTertiaryContainerDark
+    primary = BrandVibrantLeaf,
+    onPrimary = BrandCharcoalDark,
+    primaryContainer = BrandDeepEmerald,
+    onPrimaryContainer = BrandOffWhite,
+    secondary = BrandVibrantLeaf,
+    onSecondary = BrandCharcoalDark,
+    secondaryContainer = BrandDeepEmerald,
+    onSecondaryContainer = BrandOffWhite,
+    tertiary = BrandVibrantLeaf,
+    onTertiary = BrandCharcoalDark,
+    tertiaryContainer = BrandCharcoal,
+    onTertiaryContainer = BrandOffWhite,
+    background = BrandCharcoalDark,
+    onBackground = BrandOffWhite,
+    surface = BrandCharcoal,
+    onSurface = BrandOffWhite,
+    surfaceVariant = BrandCharcoal,
+    onSurfaceVariant = BrandOffWhite,
+    surfaceContainer = Color(0xFF181818),
+    surfaceContainerLow = BrandCharcoalDark,
+    surfaceContainerHigh = Color(0xFF2C2C2C),
+    surfaceContainerHighest = Color(0xFF383838),
+    outline = NeoBorderDark,
+    outlineVariant = NeoBorderDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = GreenPrimaryLight,
-    onPrimary = GreenOnPrimaryLight,
-    primaryContainer = GreenPrimaryContainerLight,
-    onPrimaryContainer = GreenOnPrimaryContainerLight,
-    secondary = SlateSecondaryLight,
-    onSecondary = SlateOnSecondaryLight,
-    secondaryContainer = SlateSecondaryContainerLight,
-    onSecondaryContainer = SlateOnSecondaryContainerLight,
-    tertiary = GoldTertiaryLight,
-    onTertiary = GoldOnTertiaryLight,
-    tertiaryContainer = GoldTertiaryContainerLight,
-    onTertiaryContainer = GoldOnTertiaryContainerLight
+    primary = BrandVibrantLeaf,
+    onPrimary = BrandWhite,
+    primaryContainer = BrandDeepEmerald,
+    onPrimaryContainer = BrandWhite,
+    secondary = BrandVibrantLeaf,
+    onSecondary = BrandWhite,
+    secondaryContainer = BrandDeepEmerald,
+    onSecondaryContainer = BrandWhite,
+    tertiary = BrandVibrantLeaf,
+    onTertiary = BrandWhite,
+    tertiaryContainer = Color(0xFFE9F5EC),
+    onTertiaryContainer = BrandDeepEmerald,
+    background = BrandOffWhite,
+    onBackground = BrandDeepEmerald,
+    surface = BrandWhite,
+    onSurface = BrandDeepEmerald,
+    surfaceVariant = BrandWhite,
+    onSurfaceVariant = BrandDeepEmerald,
+    surfaceContainer = Color(0xFFF1F3F5),
+    surfaceContainerLow = BrandOffWhite,
+    surfaceContainerHigh = Color(0xFFE9ECEF),
+    surfaceContainerHighest = Color(0xFFDEE2E6),
+    outline = NeoBorderLight,
+    outlineVariant = NeoBorderLight
 )
 
 /**
- * Custom Material 3 theme wrapper for BinMinder supporting dynamic colours on Android 12+.
+ * Custom Modifier for Subtle Neo-Brutalist Shadows.
+ */
+fun Modifier.neoShadow(
+    color: Color = Color(0xFF2A302C).copy(alpha = 0.5f), // Soft dark slate with transparency
+    offset: Dp = 2.dp // Subtle offset
+): Modifier = this.drawBehind {
+    val offsetPx = offset.toPx()
+    val cornerRadius = 8.dp.toPx() // Rounded corners
+
+    // Draw hard solid shadow
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(offsetPx, offsetPx),
+        size = size,
+        cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+    )
+}
+
+/**
+ * Custom Material 3 Neobrutalist theme wrapper for BinMinder.
  */
 @Composable
 fun BinMinderTheme(
@@ -52,8 +102,7 @@ fun BinMinderTheme(
         AppThemeMode.DARK -> true
         AppThemeMode.SYSTEM -> isSystemInDarkTheme()
     },
-    // Dynamic colour is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disabled by default for brutalist look
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

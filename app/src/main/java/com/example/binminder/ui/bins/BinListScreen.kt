@@ -1,5 +1,6 @@
 package com.example.binminder.ui.bins
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,12 +20,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.EventRepeat
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.AlertDialog
@@ -36,14 +37,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,15 +57,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.RecurrenceType
@@ -70,8 +74,9 @@ import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.formatBritishDate
 import com.example.binminder.ui.theme.formatRecurrenceLabel
-import com.example.binminder.ui.theme.getContrastingTextColor
-import com.example.binminder.ui.theme.parseBinColor
+import com.example.binminder.ui.theme.neoShadow
+import com.example.binminder.ui.theme.BrandError
+import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 
 /**
@@ -117,17 +122,21 @@ fun BinListScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
             title = {
                 Text(
-                    text = "Reset Bins & Timetable?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "RESET BINS?",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
                 Text(
-                    text = "This will reset your current wheelie bins and timetable, opening the guided Setup Wizard so you can enter a new postcode or update your schedule. Are you sure you want to proceed?",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "This will completely reset your bins and send you back to the start! Are you absolutely sure?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             confirmButton = {
@@ -135,14 +144,22 @@ fun BinListScreen(
                     onClick = {
                         showResetDialog = false
                         viewModel.resetTimetableAndAddress(context)
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandError, contentColor = Color.White),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Reset & Start Setup")
+                    Text("RESET BINS", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Cancel")
+                Button(
+                    onClick = { showResetDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -156,25 +173,36 @@ fun BinListScreen(
                 Icon(
                     imageVector = Icons.Outlined.EventRepeat,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
                 )
             },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "Bank Holiday Auto-Adjustment",
+                    text = "BANK HOLIDAY SHIFT",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
                 )
             },
             text = {
                 Text(
-                    text = "When a UK bank holiday falls in a collection week, BinDay automatically shifts this bin's collection date by +1 day (e.g. Friday ➔ Saturday).",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "When a UK bank holiday happens, we automatically bump this bin's collection date by +1 day (e.g. Friday ➔ Saturday).",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showBankHolidayInfoDialog = false }) {
-                    Text("Got it")
+                Button(
+                    onClick = { showBankHolidayInfoDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("GOT IT!", fontWeight = FontWeight.ExtraBold)
                 }
             }
         )
@@ -206,47 +234,49 @@ fun BinListContent(
                 title = {
                     Column {
                         Text(
-                            text = "Bins",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Manage Council Bin Profiles",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "MY BINS",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp
                         )
                     }
                 },
                 actions = {
                     Button(
                         onClick = onResetClick,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = BrandError,
+                            contentColor = Color.White
                         ),
-                        modifier = Modifier.padding(end = 8.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
                         Text(
-                            text = "Reset",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "RESET",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNavigateToAddBin,
-                icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                text = { Text("Add Bin") },
+                icon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp)) },
+                text = { Text("NEW BIN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -272,10 +302,10 @@ fun BinListContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     items(
@@ -292,7 +322,7 @@ fun BinListContent(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(88.dp)) // Clearance for FAB
+                        Spacer(modifier = Modifier.height(120.dp)) // Clearance for FAB
                     }
                 }
             }
@@ -303,33 +333,45 @@ fun BinListContent(
     if (uiState.binToDelete != null) {
         AlertDialog(
             onDismissRequest = onCancelDeleteBin,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "Delete Bin?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "DELETE BIN?",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to delete '${uiState.binToDelete.name}'? This action will remove all calculated collection dates for this bin.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "Are you absolutely sure you want to delete '${uiState.binToDelete.name.uppercase()}'? There's no going back!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             confirmButton = {
                 Button(
                     onClick = onConfirmDeleteBin,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
+                        containerColor = BrandError,
+                        contentColor = Color.White
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Delete")
+                    Text("DELETE BIN", fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = onCancelDeleteBin) {
-                    Text("Cancel")
+                Button(
+                    onClick = onCancelDeleteBin,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
                 }
             }
         )
@@ -337,7 +379,7 @@ fun BinListContent(
 }
 
 /**
- * Card component displaying individual bin details, dual-colour swatches, and action controls.
+ * Tactile card component displaying individual bin details, dual-colour swatches, recurrence chips, and action controls.
  */
 @Composable
 fun WheelieBinCard(
@@ -348,17 +390,19 @@ fun WheelieBinCard(
     onShowBankHolidayInfo: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (bin.isEnabled) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                MaterialTheme.colorScheme.surface
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                MaterialTheme.colorScheme.surfaceVariant
             }
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onEditClicked)
+            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (bin.isEnabled) 6.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -375,9 +419,10 @@ fun WheelieBinCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         WheelieBinVisualSwatch(
@@ -385,68 +430,77 @@ fun WheelieBinCard(
                             colorHex = bin.colorHex,
                             lidPresetColor = bin.lidPresetColor,
                             lidColorHex = bin.lidColorHex,
-                            size = 36.dp,
+                            size = 48.dp,
                             isEnabled = bin.isEnabled
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = bin.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = bin.name.uppercase(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = if (bin.isEnabled) {
                                     MaterialTheme.colorScheme.onSurface
                                 } else {
                                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 }
                             )
-                            if (!bin.isEnabled) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ) {
-                                    Text(
-                                        text = "Disabled",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
+                        }
+                        
+                        if (!bin.isEnabled) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Text(
+                                    text = "DISABLED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        // Descriptive colour & recurrence label
-                        Text(
-                            text = bin.colorDisplayName,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Text(
-                            text = formatRecurrenceLabel(bin.recurrence, bin.startDate),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        // Recurrence Chip
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        ) {
+                            Text(
+                                text = formatRecurrenceLabel(bin.recurrence, bin.startDate).uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
 
-                // Enable/Disable Switch
+                // Enable/Disable Switch with bold track
                 Switch(
                     checked = bin.isEnabled,
-                    onCheckedChange = { onToggleEnabled() }
+                    onCheckedChange = { onToggleEnabled() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedBorderColor = MaterialTheme.colorScheme.outline,
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Details section: First Collection Date & Bank Holiday adjustment badge
             Row(
@@ -459,42 +513,49 @@ fun WheelieBinCard(
                         imageVector = Icons.Rounded.Schedule,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "First: ${formatBritishDate(bin.startDate, includeDayOfWeek = false)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "STARTS: ${formatBritishDate(bin.startDate, includeDayOfWeek = false).uppercase()}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 if (bin.adjustForBankHolidays) {
-                    IconButton(
-                        onClick = onShowBankHolidayInfo,
-                        modifier = Modifier.size(28.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clip(CircleShape)
+                            .clickable(onClick = onShowBankHolidayInfo)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = "Bank Holiday Auto-Adjustment Info",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
 
             if (bin.customNote.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Note: ${bin.customNote}",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "NOTE: ${bin.customNote.uppercase()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Edit & Delete Action Row
             Row(
@@ -502,29 +563,35 @@ fun WheelieBinCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
+                OutlinedIconButton(
                     onClick = onEditClicked,
-                    modifier = Modifier.size(36.dp)
+                    colors = IconButtonDefaults.outlinedIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Edit,
+                        imageVector = Icons.Outlined.Edit,
                         contentDescription = "Edit Bin",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                IconButton(
+                OutlinedIconButton(
                     onClick = onDeleteClicked,
-                    modifier = Modifier.size(36.dp)
+                    colors = IconButtonDefaults.outlinedIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = BrandError
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Delete,
+                        imageVector = Icons.Outlined.Delete,
                         contentDescription = "Delete Bin",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -548,55 +615,81 @@ fun EmptyBinsView(
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Rounded.Delete,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(48.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "No Bins Added",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            text = "NO BINS CONFIGURED",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Create custom bin profiles or load standard UK council defaults.",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "Add a custom bin or load the standard UK defaults to get started.",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Button(
                 onClick = onAddBinClicked,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
-                Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Add Custom Bin")
+                Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "ADD CUSTOM BIN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             }
 
-            OutlinedButton(
+            Button(
                 onClick = onResetDefaultsClicked,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
             ) {
-                Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Load Defaults")
+                Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "LOAD DEFAULTS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             }
         }
     }

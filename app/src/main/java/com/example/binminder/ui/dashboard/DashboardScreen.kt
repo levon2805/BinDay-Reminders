@@ -1,7 +1,15 @@
 package com.example.binminder.ui.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
-import com.example.binminder.data.model.Bin
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EventAvailable
@@ -34,9 +41,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,18 +59,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.painterResource
-import com.example.binminder.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.binminder.R
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.ui.dialogs.CalendarExportDialog
@@ -73,7 +78,7 @@ import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.formatBritishDate
 import com.example.binminder.ui.theme.formatRelativeDays
-import com.example.binminder.util.CalendarExportUtils
+import com.example.binminder.ui.theme.neoShadow
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -146,33 +151,37 @@ fun DashboardContent(
                             painter = painterResource(id = R.drawable.ic_app_logo),
                             contentDescription = "BinDay Logo",
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(48.dp)
                                 .clip(RoundedCornerShape(8.dp))
+                                .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                         )
                         Column {
                             Text(
-                                text = "BinDay: Reminders",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "UK Council Collection Schedule",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "BINDAY",
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 2.sp
                             )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .background(MaterialTheme.colorScheme.secondary, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    ) {
                         Icon(
                             imageVector = Icons.Rounded.Notifications,
-                            contentDescription = "Notification Settings"
+                            contentDescription = "Notification Settings",
+                            tint = MaterialTheme.colorScheme.onSecondary
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
@@ -198,10 +207,10 @@ fun DashboardContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     item {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         NextCollectionHeroCard(
                             nextDate = uiState.nextCollectionDate ?: LocalDate.now(),
                             daysRemaining = uiState.daysRemaining,
@@ -217,21 +226,27 @@ fun DashboardContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 8.dp, bottom = 4.dp),
+                                    .padding(top = 16.dp, bottom = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Upcoming Timetable",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    text = "TIMETABLE",
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 if (uiState.allBins.any { it.isEnabled }) {
-                                    OutlinedButton(
+                                    Button(
                                         onClick = { showCalendarExportDialog = true },
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                                        shape = RoundedCornerShape(10.dp)
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.tertiary,
+                                            contentColor = MaterialTheme.colorScheme.onTertiary
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                        modifier = Modifier.neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.CalendarToday,
@@ -240,9 +255,9 @@ fun DashboardContent(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Add to Calendar",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold
+                                            text = "EXPORT",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.ExtraBold
                                         )
                                     }
                                 }
@@ -262,7 +277,7 @@ fun DashboardContent(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
@@ -271,7 +286,7 @@ fun DashboardContent(
 }
 
 /**
- * Featured hero card displaying the immediate next bin collection date and interactive items.
+ * Featured hero card displaying the immediate next bin collection date, relative days pill badge, and interactive bin cards.
  */
 @Composable
 fun NextCollectionHeroCard(
@@ -285,84 +300,75 @@ fun NextCollectionHeroCard(
 ) {
     val containerColor = MaterialTheme.colorScheme.primaryContainer
     val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val shadowColor = MaterialTheme.colorScheme.outline
 
     val hasBankHolidayShift = events.any { it.isBankHolidayAdjusted }
 
-    ElevatedCard(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-        modifier = modifier.fillMaxWidth()
+    // Display "TODAY" or "TOMORROW" very loud if applicable
+    val dayHeadline = when (daysRemaining) {
+        0L -> "TODAY!"
+        1L -> "TOMORROW!"
+        else -> formatRelativeDays(daysRemaining).uppercase()
+    }
+
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = modifier
+            .fillMaxWidth()
+            .neoShadow(color = shadowColor, offset = 8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
-            // Header row: Badge + Days remaining
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Schedule,
-                        contentDescription = null,
-                        tint = onContainerColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "NEXT COLLECTION",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = onContainerColor,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Text(
-                        text = formatRelativeDays(daysRemaining),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
+            // Header row: Label
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Schedule,
+                    contentDescription = null,
+                    tint = onContainerColor,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "NEXT UP",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = onContainerColor,
+                    letterSpacing = 2.sp
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Date Headline
+            // Big chunky relative day
             Text(
-                text = formatBritishDate(nextDate),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = onContainerColor
+                text = dayHeadline,
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            
+            // Sub date
+            Text(
+                text = formatBritishDate(nextDate).uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = onContainerColor.copy(alpha = 0.8f),
+                letterSpacing = 1.sp
             )
 
             // Bank Holiday Shift Banner
             if (hasBankHolidayShift) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 BankHolidayShiftBanner(events = events)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = if (events.size > 1) "Bins to put out:" else "Bin to put out:",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = onContainerColor.copy(alpha = 0.8f)
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // List of bins for this next collection
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 events.forEach { event ->
                     val isPutOut = putOutBins.contains(event.binId)
                     HeroBinItemCard(
@@ -383,43 +389,40 @@ fun NextCollectionHeroCard(
 @Composable
 fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
     val adjustedEvent = events.firstOrNull { it.isBankHolidayAdjusted }
-    val originalDay = adjustedEvent?.originalDate?.dayOfWeek?.getDisplayName(TextStyle.FULL, Locale.UK)
     val shiftedDay = adjustedEvent?.collectionDate?.dayOfWeek?.getDisplayName(TextStyle.FULL, Locale.UK)
 
-    val detailText = if (originalDay != null && shiftedDay != null) {
-        "Collection day shifts from $originalDay ➔ $shiftedDay (+1 day shift)"
+    val detailText = if (shiftedDay != null) {
+        "SHIFTED TO $shiftedDay!"
     } else {
-        "Adjusted automatically by +1 day for UK Bank Holiday"
+        "+1 DAY BANK HOLIDAY SHIFT!"
     }
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.tertiary,
+        contentColor = MaterialTheme.colorScheme.onTertiary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier
+            .fillMaxWidth()
+            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Rounded.EventAvailable,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(20.dp)
+                tint = MaterialTheme.colorScheme.onTertiary,
+                modifier = Modifier.size(28.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "+1 Day Bank Holiday Shift",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-                Text(
-                    text = detailText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    text = detailText.uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
             }
         }
@@ -427,7 +430,7 @@ fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
 }
 
 /**
- * Interactive bin item card embedded inside the next collection hero section.
+ * Interactive bin item card embedded inside the next collection hero section with tactile styling and micro-animation.
  */
 @Composable
 fun HeroBinItemCard(
@@ -438,13 +441,15 @@ fun HeroBinItemCard(
 ) {
     Card(
         onClick = onViewBinDetail,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier
+            .fillMaxWidth()
+            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -453,9 +458,10 @@ fun HeroBinItemCard(
                 // Dual-Colour Visual Bin Swatch
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     WheelieBinVisualSwatch(
@@ -463,20 +469,20 @@ fun HeroBinItemCard(
                         colorHex = event.binColorHex,
                         lidPresetColor = event.lidPresetColor,
                         lidColorHex = event.lidColorHex,
-                        size = 32.dp
+                        size = 44.dp
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                // Bin Name & Note taking full horizontal width
+                // Bin Name & Note
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = event.binName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = event.binName.uppercase(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -484,8 +490,8 @@ fun HeroBinItemCard(
                     )
                     if (event.customNote.isNotBlank()) {
                         Text(
-                            text = event.customNote,
-                            style = MaterialTheme.typography.bodySmall,
+                            text = event.customNote.uppercase(),
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -495,42 +501,73 @@ fun HeroBinItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Put Out Quick Action Button beneath bin details
-            if (isPutOut) {
-                FilledTonalButton(
-                    onClick = onMarkPutOut,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // Animated Put Out Button with Tactile Container Styling & Smooth State Change
+            val animatedContainerColor by animateColorAsState(
+                targetValue = if (isPutOut) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant,
+                animationSpec = tween(durationMillis = 200),
+                label = "PutOutContainerColor"
+            )
+            val animatedContentColor by animateColorAsState(
+                targetValue = if (isPutOut) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                animationSpec = tween(durationMillis = 200),
+                label = "PutOutContentColor"
+            )
+
+            Surface(
+                onClick = onMarkPutOut,
+                shape = RoundedCornerShape(8.dp),
+                color = animatedContainerColor,
+                contentColor = animatedContentColor,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(
+                        color = MaterialTheme.colorScheme.outline,
+                        offset = if (isPutOut) 0.dp else 4.dp // Press effect!
+                    )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Bins Are Out",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            } else {
-                OutlinedButton(
-                    onClick = onMarkPutOut,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Put Bins Out",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = isPutOut,
+                        transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) },
+                        label = "PutOutStateTransition"
+                    ) { putOut ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (putOut) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = animatedContentColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "DONE! BINS OUT",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = animatedContentColor
+                                )
+                            } else {
+                                Text(
+                                    text = "PUT BINS OUT",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = animatedContentColor
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -547,26 +584,36 @@ fun UpcomingDateSection(
     onViewBinDetail: (Long) -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Date Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 4.dp)
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Rounded.CalendarToday,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = formatBritishDate(date),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CalendarToday,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = formatBritishDate(date).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
         }
 
         // Cards for events on this date
@@ -580,7 +627,7 @@ fun UpcomingDateSection(
 }
 
 /**
- * Compact card composable displaying a future collection event with dual-colour swatch.
+ * Compact card composable displaying a future collection event with dual-colour swatch and tactile styling.
  */
 @Composable
 fun UpcomingEventCard(
@@ -588,24 +635,27 @@ fun UpcomingEventCard(
     onClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Dual-colour swatch icon
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 WheelieBinVisualSwatch(
@@ -613,11 +663,11 @@ fun UpcomingEventCard(
                     colorHex = event.binColorHex,
                     lidPresetColor = event.lidPresetColor,
                     lidColorHex = event.lidColorHex,
-                    size = 28.dp
+                    size = 36.dp
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(
                 modifier = Modifier
@@ -625,17 +675,17 @@ fun UpcomingEventCard(
                     .padding(end = 8.dp)
             ) {
                 Text(
-                    text = event.binName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    text = event.binName.uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (event.customNote.isNotBlank()) {
                     Text(
-                        text = event.customNote,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = event.customNote.uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -647,15 +697,16 @@ fun UpcomingEventCard(
                 val origDay = event.originalDate.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.UK)
                 val newDay = event.collectionDate.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.UK)
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(
-                        text = "+1d Bank Holiday ($origDay ➔ $newDay)",
+                        text = "+1D ($origDay➔$newDay)".uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -678,45 +729,56 @@ fun EmptyScheduleView(
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Rounded.Delete,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(48.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "No Active Bins",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            text = "NO SCHEDULED COLLECTIONS",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Add your council bin schedules to display your upcoming timetable.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = "Add your council bin schedules to see upcoming collections.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Button(
             onClick = onAddBinClicked,
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier
+                .height(56.dp)
+                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
-            Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Add Bin")
+            Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(text = "ADD A BIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
         }
     }
 }

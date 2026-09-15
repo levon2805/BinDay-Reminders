@@ -156,7 +156,7 @@ fun formatRelativeDays(days: Long): String {
 }
 
 /**
- * Renders a visual wheelie bin icon / swatch with distinct body and lid colours.
+ * Renders a visual wheelie bin icon / swatch with distinct body and lid colours, glossy rims, handles, and wheels.
  */
 @Composable
 fun WheelieBinVisualSwatch(
@@ -168,87 +168,114 @@ fun WheelieBinVisualSwatch(
     size: Dp = 36.dp,
     isEnabled: Boolean = true
 ) {
-    val bodyColor = parseBinColor(colorHex, presetColor)
-    val lidColor = lidPresetColor?.let { parseBinColor(lidColorHex, it) } ?: bodyColor
-    val alpha = if (isEnabled) 1.0f else 0.4f
-
-    Canvas(
-        modifier = modifier.size(size)
-    ) {
-        val w = size.toPx()
-        val h = size.toPx()
-
-        // Bin Body tapered coordinates
-        val bodyTopLeftX = w * 0.20f
-        val bodyTopRightX = w * 0.80f
-        val bodyTopY = h * 0.28f
-
-        val bodyBottomLeftX = w * 0.24f
-        val bodyBottomRightX = w * 0.76f
-        val bodyBottomY = h * 0.86f
-
-        // Draw Wheels at bottom left and bottom right
-        val wheelRadius = w * 0.08f
-        drawCircle(
-            color = Color(0xFF212121).copy(alpha = alpha),
-            radius = wheelRadius,
-            center = Offset(bodyBottomLeftX, bodyBottomY)
-        )
-        drawCircle(
-            color = Color(0xFF212121).copy(alpha = alpha),
-            radius = wheelRadius,
-            center = Offset(bodyBottomRightX, bodyBottomY)
-        )
-
-        // Draw Bin Body Path
-        val bodyPath = Path().apply {
-            moveTo(bodyTopLeftX, bodyTopY)
-            lineTo(bodyTopRightX, bodyTopY)
-            lineTo(bodyBottomRightX, bodyBottomY)
-            lineTo(bodyBottomLeftX, bodyBottomY)
-            close()
+        val bodyColor = parseBinColor(colorHex, presetColor)
+        val lidColor = lidPresetColor?.let { parseBinColor(lidColorHex, it) } ?: bodyColor
+        val alpha = if (isEnabled) 1.0f else 0.4f
+        val strokeWidth = 1.4f
+        val outlineColor = Color(0x33000000).copy(alpha = 0.2f * alpha)
+    
+        Canvas(
+            modifier = modifier.size(size)
+        ) {
+            val w = size.toPx()
+            val h = size.toPx()
+    
+            // Bin Body tapered coordinates
+            val bodyTopLeftX = w * 0.15f
+            val bodyTopRightX = w * 0.85f
+            val bodyTopY = h * 0.28f
+    
+            val bodyBottomLeftX = w * 0.22f
+            val bodyBottomRightX = w * 0.78f
+            val bodyBottomY = h * 0.86f
+    
+            // Draw Wheels at bottom left and bottom right
+            val wheelRadius = w * 0.12f
+            // Outer tyre
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.8f * alpha),
+                radius = wheelRadius,
+                center = Offset(bodyBottomLeftX, bodyBottomY)
+            )
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.8f * alpha),
+                radius = wheelRadius,
+                center = Offset(bodyBottomRightX, bodyBottomY)
+            )
+            // Hubcap rim
+            drawCircle(
+                color = Color.White.copy(alpha = alpha),
+                radius = wheelRadius * 0.35f,
+                center = Offset(bodyBottomLeftX, bodyBottomY)
+            )
+            drawCircle(
+                color = Color.White.copy(alpha = alpha),
+                radius = wheelRadius * 0.35f,
+                center = Offset(bodyBottomRightX, bodyBottomY)
+            )
+    
+            // Draw Bin Body Path
+            val bodyPath = Path().apply {
+                moveTo(bodyTopLeftX, bodyTopY)
+                lineTo(bodyTopRightX, bodyTopY)
+                lineTo(bodyBottomRightX, bodyBottomY)
+                lineTo(bodyBottomLeftX, bodyBottomY)
+                close()
+            }
+            drawPath(
+                path = bodyPath,
+                color = bodyColor.copy(alpha = alpha)
+            )
+    
+            // Body outline stroke
+            drawPath(
+                path = bodyPath,
+                color = outlineColor,
+                style = Stroke(width = strokeWidth)
+            )
+            
+            // Sleek bin, no faces.
+    
+            // Draw Lid Handle
+            val handleWidth = w * 0.35f
+            val handleHeight = h * 0.08f
+            val handleLeft = (w - handleWidth) / 2f
+            val handleTop = h * 0.04f
+            drawRoundRect(
+                color = lidColor.copy(alpha = alpha),
+                topLeft = Offset(handleLeft, handleTop),
+                size = Size(handleWidth, handleHeight),
+                cornerRadius = CornerRadius(handleHeight / 2f, handleHeight / 2f)
+            )
+            // Handle outline
+            drawRoundRect(
+                color = outlineColor,
+                topLeft = Offset(handleLeft, handleTop),
+                size = Size(handleWidth, handleHeight),
+                cornerRadius = CornerRadius(handleHeight / 2f, handleHeight / 2f),
+                style = Stroke(width = strokeWidth)
+            )
+    
+            // Draw Lid Rim (Glossy Top Lid)
+            val lidWidth = w * 0.80f
+            val lidHeight = h * 0.16f
+            val lidLeft = (w - lidWidth) / 2f
+            val lidTop = h * 0.11f
+    
+            drawRoundRect(
+                color = lidColor.copy(alpha = alpha),
+                topLeft = Offset(lidLeft, lidTop),
+                size = Size(lidWidth, lidHeight),
+                cornerRadius = CornerRadius(w * 0.04f, w * 0.04f)
+            )
+    
+            // Lid outline stroke
+            drawRoundRect(
+                color = outlineColor,
+                topLeft = Offset(lidLeft, lidTop),
+                size = Size(lidWidth, lidHeight),
+                cornerRadius = CornerRadius(w * 0.04f, w * 0.04f),
+                style = Stroke(width = strokeWidth)
+            )
         }
-        drawPath(
-            path = bodyPath,
-            color = bodyColor.copy(alpha = alpha)
-        )
-        // Body outline stroke
-        drawPath(
-            path = bodyPath,
-            color = Color.Black.copy(alpha = 0.25f * alpha),
-            style = Stroke(width = w * 0.03f)
-        )
-
-        // Draw Lid Handle
-        val handleWidth = w * 0.28f
-        val handleHeight = h * 0.06f
-        val handleLeft = (w - handleWidth) / 2f
-        val handleTop = h * 0.08f
-        drawRoundRect(
-            color = lidColor.copy(alpha = alpha),
-            topLeft = Offset(handleLeft, handleTop),
-            size = Size(handleWidth, handleHeight),
-            cornerRadius = CornerRadius(handleHeight / 2f, handleHeight / 2f)
-        )
-
-        // Draw Lid Rim
-        val lidWidth = w * 0.72f
-        val lidHeight = h * 0.16f
-        val lidLeft = (w - lidWidth) / 2f
-        val lidTop = h * 0.13f
-
-        drawRoundRect(
-            color = lidColor.copy(alpha = alpha),
-            topLeft = Offset(lidLeft, lidTop),
-            size = Size(lidWidth, lidHeight),
-            cornerRadius = CornerRadius(w * 0.04f, w * 0.04f)
-        )
-        drawRoundRect(
-            color = Color.Black.copy(alpha = 0.25f * alpha),
-            topLeft = Offset(lidLeft, lidTop),
-            size = Size(lidWidth, lidHeight),
-            cornerRadius = CornerRadius(w * 0.04f, w * 0.04f),
-            style = Stroke(width = w * 0.03f)
-        )
-    }
 }

@@ -6,10 +6,19 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,8 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,7 +50,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -54,6 +61,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -66,26 +74,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.Image
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
-import com.example.binminder.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.binminder.R
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
 import com.example.binminder.ui.dialogs.CalendarExportDialog
 import com.example.binminder.ui.theme.BinMinderTheme
-import com.example.binminder.ui.theme.formatBritishDate
-import com.example.binminder.util.CalendarExportUtils
+import com.example.binminder.ui.theme.neoShadow
+import com.example.binminder.ui.theme.BrandError
+import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -176,7 +184,7 @@ fun SettingsScreen(
 }
 
 /**
- * Structural layout for the application settings screen.
+ * Structural layout for the application settings screen with grouped tactile cards.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -214,19 +222,15 @@ fun SettingsContent(
                 title = {
                     Column {
                         Text(
-                            text = "Settings & Preferences",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Notifications & Council Presets",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "SETTINGS",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
@@ -239,32 +243,33 @@ fun SettingsContent(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Section 1: Notifications & Reminder Schedule
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Notifications,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "Bin Collection Reminders",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "NOTIFICATIONS",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
 
@@ -275,64 +280,77 @@ fun SettingsContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Push Notifications",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
+                                text = "PUSH ALERTS",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = "Receive scheduled alerts before collection day",
-                                style = MaterialTheme.typography.bodySmall,
+                                text = "Remind me before collection day",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         Switch(
                             checked = settings.reminderEnabled,
-                            onCheckedChange = onToggleReminders
+                            onCheckedChange = onToggleReminders,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedBorderColor = MaterialTheme.colorScheme.outline,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                            )
                         )
                     }
 
                     if (settings.reminderEnabled) {
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Reminder Schedule & Timing",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
+                            text = "TIMING",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Preset Schedule Options: Evening Before
                         Text(
-                            text = "Evening Before Collection",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                            text = "EVENING BEFORE",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             listOf(
-                                LocalTime.of(19, 0) to "19:00 (7:00 PM)",
-                                LocalTime.of(20, 0) to "20:00 (8:00 PM)",
-                                LocalTime.of(21, 0) to "21:00 (9:00 PM)"
+                                LocalTime.of(19, 0) to "19:00",
+                                LocalTime.of(20, 0) to "20:00",
+                                LocalTime.of(21, 0) to "21:00"
                             ).forEach { (time, label) ->
                                 val isSelected = settings.reminderEveningBefore && settings.reminderTime == time
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { onUpdateSchedule(time, true) },
-                                    label = { Text(label) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onUpdateSchedule(time, true) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
-                                )
+                                }
                             }
 
                             val isEveningCustom = settings.reminderEveningBefore && settings.reminderTime !in listOf(
@@ -341,57 +359,69 @@ fun SettingsContent(
                                 LocalTime.of(21, 0)
                             )
                             val customEveningLabel = if (isEveningCustom) {
-                                "Custom (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "CUSTOM (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "Custom..."
+                                "CUSTOM"
                             }
 
-                            FilterChip(
-                                selected = isEveningCustom,
-                                onClick = {
-                                    customTimeEveningBefore = true
-                                    showTimePickerDialog = true
-                                },
-                                label = { Text(customEveningLabel) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isEveningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isEveningCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable {
+                                        customTimeEveningBefore = true
+                                        showTimePickerDialog = true
+                                    }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = customEveningLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
-                            )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         // Preset Schedule Options: Morning Of
                         Text(
-                            text = "Morning Of Collection",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                            text = "MORNING OF",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             listOf(
-                                LocalTime.of(6, 0) to "06:00 (6:00 AM)",
-                                LocalTime.of(7, 0) to "07:00 (7:00 AM)",
-                                LocalTime.of(8, 0) to "08:00 (8:00 AM)"
+                                LocalTime.of(6, 0) to "06:00",
+                                LocalTime.of(7, 0) to "07:00",
+                                LocalTime.of(8, 0) to "08:00"
                             ).forEach { (time, label) ->
                                 val isSelected = !settings.reminderEveningBefore && settings.reminderTime == time
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { onUpdateSchedule(time, false) },
-                                    label = { Text(label) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onUpdateSchedule(time, false) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
-                                )
+                                }
                             }
 
                             val isMorningCustom = !settings.reminderEveningBefore && settings.reminderTime !in listOf(
@@ -400,45 +430,55 @@ fun SettingsContent(
                                 LocalTime.of(8, 0)
                             )
                             val customMorningLabel = if (isMorningCustom) {
-                                "Custom (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "CUSTOM (${settings.reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "Custom..."
+                                "CUSTOM"
                             }
 
-                            FilterChip(
-                                selected = isMorningCustom,
-                                onClick = {
-                                    customTimeEveningBefore = false
-                                    showTimePickerDialog = true
-                                },
-                                label = { Text(customMorningLabel) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isMorningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isMorningCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable {
+                                        customTimeEveningBefore = false
+                                        showTimePickerDialog = true
+                                    }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningCustom) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = customMorningLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
-                            )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         // Test Notification Button
                         Button(
                             onClick = onSendTestNotification,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondary,
                                 contentColor = MaterialTheme.colorScheme.onSecondary
                             ),
-                            modifier = Modifier.fillMaxWidth()
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.NotificationsActive,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Send Test Notification")
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("TEST NOTIFICATION", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
@@ -446,15 +486,15 @@ fun SettingsContent(
 
             // Section 2: UK Bank Holiday Shift Rules (Expandable)
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
                     .animateContentSize()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -470,17 +510,20 @@ fun SettingsContent(
                                 imageVector = Icons.Rounded.EventRepeat,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = "UK Bank Holiday Shift Rules",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = "BANK HOLIDAYS",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
 
-                        IconButton(onClick = { isBankHolidaysExpanded = !isBankHolidaysExpanded }) {
+                        IconButton(
+                            onClick = { isBankHolidaysExpanded = !isBankHolidaysExpanded },
+                            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape).background(MaterialTheme.colorScheme.surface, CircleShape)
+                        ) {
                             Icon(
                                 imageVector = if (isBankHolidaysExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                                 contentDescription = if (isBankHolidaysExpanded) "Collapse" else "Expand"
@@ -488,135 +531,71 @@ fun SettingsContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Info,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Collections delayed by +1 day after a bank holiday",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
                     if (isBankHolidaysExpanded) {
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Substitute Bank Holidays: In the UK, when Christmas, Boxing Day, or New Year's Day falls on a weekend, the UK government designates the following Monday/Tuesday as the official 'Substitute' Bank Holiday.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         if (uiState.bankHolidayPreviews.isEmpty()) {
                             Text(
                                 text = "No upcoming bank holiday shifts found.",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
                             val grouped = uiState.bankHolidayPreviews.groupBy { it.holidayName to it.holidayDate }
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 grouped.forEach { (holidayKey, shifts) ->
                                     val (holidayName, holidayDate) = holidayKey
                                     Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        tonalElevation = 1.dp,
-                                        modifier = Modifier.fillMaxWidth()
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                        modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(12.dp),
+                                                .padding(16.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
                                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                                             ) {
                                                 Column(
                                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                                                 ) {
                                                     Text(
-                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("dd MMM")),
+                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("dd MMM")).uppercase(),
                                                         style = MaterialTheme.typography.labelLarge,
-                                                        fontWeight = FontWeight.Bold
+                                                        fontWeight = FontWeight.ExtraBold
                                                     )
                                                     Text(
                                                         text = holidayDate.format(DateTimeFormatter.ofPattern("yyyy")),
-                                                        style = MaterialTheme.typography.labelSmall
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                 }
                                             }
 
-                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Spacer(modifier = Modifier.width(16.dp))
 
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        text = holidayName,
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    if (holidayName.contains("Substitute", ignoreCase = true) || holidayName.contains("Boxing Day", ignoreCase = true)) {
-                                                        IconButton(
-                                                            onClick = { showSubstituteHolidayInfoDialog = true },
-                                                            modifier = Modifier.size(24.dp).padding(start = 4.dp)
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Outlined.Info,
-                                                                contentDescription = "Substitute Bank Holiday Info",
-                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                modifier = Modifier.size(16.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = holidayName.uppercase(),
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
                                                 shifts.forEach { shift ->
                                                     Text(
-                                                        text = "${shift.binName}: ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1d)",
-                                                        style = MaterialTheme.typography.bodySmall,
+                                                        text = "${shift.binName.uppercase()}: ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1D)",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
@@ -632,32 +611,33 @@ fun SettingsContent(
 
             // Section 3: Council & Timetable Management
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "Council & Timetable Management",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "TIMETABLE",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
 
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             val activeBins = uiState.allBins.filter { it.isEnabled }
                             if (activeBins.isNotEmpty()) {
@@ -666,173 +646,151 @@ fun SettingsContent(
                                 Toast.makeText(context, "No active bins found to export.", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add Bins to Calendar", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                        Icon(imageVector = Icons.Outlined.CalendarToday, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("ADD TO CALENDAR", fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedButton(
-                        onClick = { showRestoreDefaultsDialog = true },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restore Standard UK Bins")
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Resets your bins to default UK council profiles (General, Recycling, Garden, Food Caddy).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = { showResetDialog = true },
-                        shape = RoundedCornerShape(12.dp),
+                        onClick = { showRestoreDefaultsDialog = true },
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
-                        Icon(imageVector = Icons.Rounded.RestartAlt, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Reset Timetable & Address",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .wrapContentHeight()
+                            ) {
+                                Text(
+                                    text = "Restore Standard UK Bins",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Resets your bins to default UK council profiles...",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Text(
-                        text = "Clears all bins and restarts the guided setup wizard to enter a new postcode or address.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                    Button(
+                        onClick = { showResetDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandError,
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth().height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                    ) {
+                        Icon(imageVector = Icons.Rounded.RestartAlt, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "FACTORY RESET",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
             }
 
-            // Section 3: Theme Preference
+            // Section 4: Theme Preference
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Palette,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "Theme Preference",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "THEME",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
 
-                    Text(
-                        text = "App Appearance",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Select your preferred app display theme",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         AppThemeMode.entries.forEach { mode ->
                             val isSelected = uiState.themeMode == mode
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onSetThemeMode(mode) },
-                                label = { Text(mode.label) },
-                                leadingIcon = if (isSelected) {
-                                    {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onSetThemeMode(mode) }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Rounded.Check,
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp)
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                     }
-                                } else null,
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
+                                    Text(
+                                        text = mode.label.uppercase(),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            }
-
-            // Section 4: About
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_app_logo),
-                            contentDescription = "BinDay Logo",
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "About BinDay: Reminders",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "BinDay v1.0.0",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Designed for household bin timetable tracking across England, Wales, Scotland, and Northern Ireland.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
@@ -844,24 +802,19 @@ fun SettingsContent(
     if (showRestoreDefaultsDialog) {
         AlertDialog(
             onDismissRequest = { showRestoreDefaultsDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.Refresh,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "Restore Standard UK Bins?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "RESTORE DEFAULTS?",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
                 Text(
-                    text = "This will replace your current bins with the standard UK council profile (General Waste, Recycling, Garden, Food Caddy). Your postcode settings will be kept.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "This will delete all custom bins and restore the default UK set. Are you sure?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             confirmButton = {
@@ -869,14 +822,22 @@ fun SettingsContent(
                     onClick = {
                         showRestoreDefaultsDialog = false
                         onResetDefaultBins()
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Restore Bins")
+                    Text("RESTORE", fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRestoreDefaultsDialog = false }) {
-                    Text("Cancel")
+                Button(
+                    onClick = { showRestoreDefaultsDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
                 }
             }
         )
@@ -886,24 +847,19 @@ fun SettingsContent(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.RestartAlt,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "Reset Timetable & Address?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "FACTORY RESET?",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
                 Text(
-                    text = "This will clear your current bins and timetable, and re-run the Setup Wizard so you can set up a new postcode or address.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "This will wipe all bins, settings, and start the setup wizard over. Are you sure?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             confirmButton = {
@@ -912,17 +868,21 @@ fun SettingsContent(
                         showResetDialog = false
                         onResetAndStartSetup()
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandError, contentColor = Color.White),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Reset & Start Setup")
+                    Text("RESET ALL", fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Cancel")
+                Button(
+                    onClick = { showResetDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
                 }
             }
         )
@@ -938,20 +898,28 @@ fun SettingsContent(
 
         AlertDialog(
             onDismissRequest = { showTimePickerDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
                         onUpdateSchedule(selectedTime, customTimeEveningBefore)
                         showTimePickerDialog = false
-                    }
+                    },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Set Time")
+                    Text("SET TIME", fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePickerDialog = false }) {
-                    Text("Cancel")
+                Button(
+                    onClick = { showTimePickerDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
                 }
             },
             text = {
@@ -960,9 +928,9 @@ fun SettingsContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (customTimeEveningBefore) "Select Custom Evening Time" else "Select Custom Morning Time",
+                        text = if (customTimeEveningBefore) "EVENING TIME" else "MORNING TIME",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     TimePicker(state = timePickerState)
@@ -979,25 +947,32 @@ fun SettingsContent(
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
                 )
             },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "Substitute Bank Holidays",
+                    text = "SUBSTITUTE HOLIDAYS",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
                 Text(
                     text = BankHolidayCalculator.SUBSTITUTE_BANK_HOLIDAY_EXPLANATION,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showSubstituteHolidayInfoDialog = false }) {
-                    Text("Got it")
+                Button(
+                    onClick = { showSubstituteHolidayInfoDialog = false },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("COOL!", fontWeight = FontWeight.ExtraBold)
                 }
             }
         )
