@@ -27,4 +27,17 @@ class ToggleBinPutOutUseCaseTest {
         assertTrue(result.updatedPutOutBins.contains(2L))
         assertEquals("Unmarked 'General Waste' bin.", result.userMessage)
     }
+
+    @Test
+    fun testUncheckingBinReturnsIsPutOutFalseForBin() {
+        val binId = 101L
+        val initialSet = setOf(binId, 102L)
+
+        // User unchecks "Bins Are Out"
+        val result = useCase(binId = binId, binName = "Dry Mixed Recycling", currentPutOutBins = initialSet)
+
+        val isPutOut = result.updatedPutOutBins.contains(binId)
+        assertFalse("Unchecking bin must set isPutOut to false", isPutOut)
+        assertEquals("Unmarked 'Dry Mixed Recycling' bin.", result.userMessage)
+    }
 }

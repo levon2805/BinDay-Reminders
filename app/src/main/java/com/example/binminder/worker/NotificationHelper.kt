@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -16,7 +17,7 @@ import com.example.binminder.MainActivity
 import com.example.binminder.R
 
 /**
- * Helper object for building and posting bin collection system notifications.
+ * Helper object for building and posting high-priority heads-up bin collection system notifications.
  */
 object NotificationHelper {
 
@@ -25,7 +26,7 @@ object NotificationHelper {
     private const val CHANNEL_DESCRIPTION = "Notifications for upcoming bin collection schedules"
 
     /**
-     * Creates the Android notification channel required for collection reminders.
+     * Creates the Android notification channel required for collection reminders with high importance and heads-up visibility.
      */
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -36,6 +37,10 @@ object NotificationHelper {
             ).apply {
                 description = CHANNEL_DESCRIPTION
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
+                enableLights(true)
+                setShowBadge(true)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
 
             val notificationManager =
@@ -45,7 +50,7 @@ object NotificationHelper {
     }
 
     /**
-     * Posts a bin collection reminder notification to the Android system tray.
+     * Posts a high-priority heads-up bin collection reminder notification to the Android system tray.
      */
     @SuppressLint("MissingPermission")
     fun postCollectionReminderNotification(
@@ -78,13 +83,21 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_app_logo)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 250, 250, 250))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true) // Heads-up banner flag
             .setAutoCancel(true)
 
         NotificationManagerCompat.from(context).notify(notificationId, builder.build())

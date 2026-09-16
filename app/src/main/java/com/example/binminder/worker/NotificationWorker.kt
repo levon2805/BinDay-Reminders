@@ -41,28 +41,39 @@ class NotificationWorker(
 
         val putOutBins = repository.putOutBins.first()
         val slot = inputData.getString("REMINDER_SLOT")
+        val targetDateStr = inputData.getString("TARGET_DATE")
 
         val targetDates = mutableListOf<Pair<LocalDate, Boolean>>() // Pair(targetDate, isEvening)
 
-        if (slot == "EVENING") {
-            targetDates.add(LocalDate.now().plusDays(1) to true)
-        } else if (slot == "MORNING") {
-            targetDates.add(LocalDate.now() to false)
-        } else {
-            if (settings.eveningReminderTime != null) {
-                targetDates.add(LocalDate.now().plusDays(1) to true)
-            }
-            if (settings.morningReminderTime != null) {
-                targetDates.add(LocalDate.now() to false)
-            }
-            if (targetDates.isEmpty()) {
-                val isEvening = settings.reminderEveningBefore
-                val date = if (isEvening) LocalDate.now().plusDays(1) else LocalDate.now()
-                targetDates.add(date to isEvening)
+        if (targetDateStr != null) {
+            runCatching {
+                val parsedDate = LocalDate.parse(targetDateStr)
+                val isEvening = slot == "EVENING"
+                targetDates.add(parsedDate to isEvening)
             }
         }
 
-        val bins = repository.getBinsList()
+        if (targetDates.isEmpty()) {
+            if (slot == "EVENING") {
+                targetDates.add(LocalDate.now().plusDays(1) to true)
+            } else if (slot == "MORNING") {
+                targetDates.add(LocalDate.now() to false)
+            } else {
+                if (settings.eveningReminderTime != null) {
+                    targetDates.add(LocalDate.now().plusDays(1) to true)
+                }
+                if (settings.morningReminderTime != null) {
+                    targetDates.add(LocalDate.now() to false)
+                }
+                if (targetDates.isEmpty()) {
+                    val isEvening = settings.reminderEveningBefore
+                    val date = if (isEvening) LocalDate.now().plusDays(1) else LocalDate.now()
+                    targetDates.add(date to isEvening)
+                }
+            }
+        }
+
+        val bins = repository.getBinsList().filter { it.isEnabled }
 
         for ((targetDate, isEvening) in targetDates) {
             val events = ScheduleEngine.generateCollectionEvents(bins, targetDate, targetDate)
@@ -90,6 +101,7 @@ class NotificationWorker(
                     "Please remember to put out your $binNames bin."
                 }
 
+                Log.d(TAG, "Posting high-priority reminder notification for $targetDate ($binNames)")
                 NotificationHelper.postCollectionReminderNotification(
                     context = appContext,
                     title = title,

@@ -4,7 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 class NotificationSettingsTest {
@@ -84,5 +86,22 @@ class NotificationSettingsTest {
 
         assertEquals(LocalDate.of(2025, 5, 6), reminderTriggerDate) // Tue May 6 morning
     }
-}
 
+    @Test
+    fun testCustomTimeExactDelayCalculation() {
+        val settings = NotificationSettings(
+            reminderEnabled = true,
+            eveningReminderTime = LocalTime.of(22, 15),
+            morningReminderTime = LocalTime.of(7, 0)
+        )
+
+        val collectionDate = LocalDate.of(2025, 5, 6)
+        val eveningTargetDate = collectionDate.minusDays(1)
+        val eveningTargetDateTime = LocalDateTime.of(eveningTargetDate, settings.eveningReminderTime)
+
+        val now = LocalDateTime.of(2025, 5, 5, 22, 10)
+        val delayMillis = Duration.between(now, eveningTargetDateTime).toMillis()
+
+        assertEquals(300000L, delayMillis) // 5 minutes (300,000 ms)
+    }
+}

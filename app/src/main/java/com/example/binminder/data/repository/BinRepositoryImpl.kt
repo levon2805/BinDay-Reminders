@@ -39,8 +39,7 @@ class BinRepositoryImpl(
 
     private suspend fun triggerScheduleUpdate() = withContext(Dispatchers.IO) {
         runCatching {
-            val settings = notificationSettingsDataStore.notificationSettings.first()
-            NotificationScheduler.scheduleDailyReminder(applicationContext, settings)
+            NotificationScheduler.scheduleNotificationWorker(applicationContext)
         }
     }
 
@@ -233,7 +232,7 @@ class BinRepositoryImpl(
      */
     override suspend fun updateNotificationSettings(settings: NotificationSettings): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.updateSettings(settings)
-        NotificationScheduler.scheduleDailyReminder(applicationContext, settings)
+        NotificationScheduler.scheduleNotificationWorker(applicationContext, settings)
     }
 
     /**
@@ -243,10 +242,11 @@ class BinRepositoryImpl(
         notificationSettingsDataStore.putOutBinIds.flowOn(Dispatchers.IO)
 
     /**
-     * Updates set of put out bin IDs on [Dispatchers.IO].
+     * Updates set of put out bin IDs on [Dispatchers.IO] and immediately reschedules notification engine.
      */
     override suspend fun updatePutOutBins(binIds: Set<Long>): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setPutOutBinIds(binIds)
+        NotificationScheduler.scheduleNotificationWorker(applicationContext)
     }
 
     /**

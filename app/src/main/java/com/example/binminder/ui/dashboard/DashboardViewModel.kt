@@ -119,9 +119,11 @@ class DashboardViewModel(
         viewModelScope.launch {
             repository.updatePutOutBins(result.updatedPutOutBins)
             if (context != null) {
-                NotificationScheduler.cancelOrSuppressNotificationForToday(context)
-                val settings = repository.notificationSettings.first()
-                NotificationScheduler.scheduleDailyReminder(context, settings)
+                if (result.updatedPutOutBins.contains(binId)) {
+                    // Bin was marked as put out: suppress/cancel system tray notification
+                    NotificationScheduler.cancelOrSuppressNotificationForToday(context)
+                }
+                NotificationScheduler.scheduleNotificationWorker(context)
             }
         }
     }
