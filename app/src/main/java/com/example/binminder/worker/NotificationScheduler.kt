@@ -26,12 +26,18 @@ object NotificationScheduler {
     fun scheduleDailyReminder(context: Context, settings: NotificationSettings) {
         try {
             val appContext = context.applicationContext
-            val workManager = WorkManager.getInstance(appContext)
+            val workManager = try {
+                WorkManager.getInstance(appContext)
+            } catch (_: Throwable) {
+                return
+            }
 
             if (!settings.reminderEnabled || (settings.eveningReminderTime == null && settings.morningReminderTime == null)) {
-                workManager.cancelUniqueWork(WORK_NAME)
-                workManager.cancelUniqueWork(WORK_NAME_EVENING)
-                workManager.cancelUniqueWork(WORK_NAME_MORNING)
+                try {
+                    workManager.cancelUniqueWork(WORK_NAME)
+                    workManager.cancelUniqueWork(WORK_NAME_EVENING)
+                    workManager.cancelUniqueWork(WORK_NAME_MORNING)
+                } catch (_: Throwable) {}
                 return
             }
 
@@ -39,48 +45,58 @@ object NotificationScheduler {
 
             // 1. Evening reminder slot
             if (settings.eveningReminderTime != null) {
-                val targetToday = LocalDateTime.of(LocalDate.now(), settings.eveningReminderTime)
-                val targetTime = if (now.isAfter(targetToday)) targetToday.plusDays(1) else targetToday
-                val delayMillis = Duration.between(now, targetTime).toMillis().coerceAtLeast(0)
+                try {
+                    val targetToday = LocalDateTime.of(LocalDate.now(), settings.eveningReminderTime)
+                    val targetTime = if (now.isAfter(targetToday)) targetToday.plusDays(1) else targetToday
+                    val delayMillis = Duration.between(now, targetTime).toMillis().coerceAtLeast(0)
 
-                val workData = workDataOf("REMINDER_SLOT" to "EVENING")
-                val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
-                    .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                    .setInputData(workData)
-                    .build()
+                    val workData = workDataOf("REMINDER_SLOT" to "EVENING")
+                    val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
+                        .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                        .setInputData(workData)
+                        .build()
 
-                workManager.enqueueUniquePeriodicWork(
-                    WORK_NAME_EVENING,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    workRequest
-                )
+                    workManager.enqueueUniquePeriodicWork(
+                        WORK_NAME_EVENING,
+                        ExistingPeriodicWorkPolicy.UPDATE,
+                        workRequest
+                    )
+                } catch (_: Throwable) {}
             } else {
-                workManager.cancelUniqueWork(WORK_NAME_EVENING)
+                try {
+                    workManager.cancelUniqueWork(WORK_NAME_EVENING)
+                } catch (_: Throwable) {}
             }
 
             // 2. Morning reminder slot
             if (settings.morningReminderTime != null) {
-                val targetToday = LocalDateTime.of(LocalDate.now(), settings.morningReminderTime)
-                val targetTime = if (now.isAfter(targetToday)) targetToday.plusDays(1) else targetToday
-                val delayMillis = Duration.between(now, targetTime).toMillis().coerceAtLeast(0)
+                try {
+                    val targetToday = LocalDateTime.of(LocalDate.now(), settings.morningReminderTime)
+                    val targetTime = if (now.isAfter(targetToday)) targetToday.plusDays(1) else targetToday
+                    val delayMillis = Duration.between(now, targetTime).toMillis().coerceAtLeast(0)
 
-                val workData = workDataOf("REMINDER_SLOT" to "MORNING")
-                val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
-                    .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                    .setInputData(workData)
-                    .build()
+                    val workData = workDataOf("REMINDER_SLOT" to "MORNING")
+                    val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
+                        .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                        .setInputData(workData)
+                        .build()
 
-                workManager.enqueueUniquePeriodicWork(
-                    WORK_NAME_MORNING,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    workRequest
-                )
+                    workManager.enqueueUniquePeriodicWork(
+                        WORK_NAME_MORNING,
+                        ExistingPeriodicWorkPolicy.UPDATE,
+                        workRequest
+                    )
+                } catch (_: Throwable) {}
             } else {
-                workManager.cancelUniqueWork(WORK_NAME_MORNING)
+                try {
+                    workManager.cancelUniqueWork(WORK_NAME_MORNING)
+                } catch (_: Throwable) {}
             }
 
-            workManager.cancelUniqueWork(WORK_NAME)
-        } catch (_: Exception) {
+            try {
+                workManager.cancelUniqueWork(WORK_NAME)
+            } catch (_: Throwable) {}
+        } catch (_: Throwable) {
             // Safe fallback for unit tests or uninitialised WorkManager context
         }
     }
@@ -94,7 +110,7 @@ object NotificationScheduler {
             NotificationHelper.cancelNotification(appContext, targetDate.hashCode())
             NotificationHelper.cancelNotification(appContext, targetDate.plusDays(1).hashCode())
             NotificationHelper.cancelNotification(appContext, 1001)
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     /**
@@ -108,7 +124,7 @@ object NotificationScheduler {
                 message = "Test reminder successful! Your wheelie bin collection notifications are configured correctly.",
                 notificationId = 9999
             )
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     /**
@@ -117,11 +133,15 @@ object NotificationScheduler {
     fun cancelReminder(context: Context) {
         try {
             val appContext = context.applicationContext
-            val workManager = WorkManager.getInstance(appContext)
+            val workManager = try {
+                WorkManager.getInstance(appContext)
+            } catch (_: Throwable) {
+                return
+            }
             workManager.cancelUniqueWork(WORK_NAME)
             workManager.cancelUniqueWork(WORK_NAME_EVENING)
             workManager.cancelUniqueWork(WORK_NAME_MORNING)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             // Safe fallback for unit tests or uninitialised WorkManager context
         }
     }

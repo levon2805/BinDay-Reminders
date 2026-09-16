@@ -372,6 +372,13 @@ class OnboardingViewModel(
     }
 
     /**
+     * Updates notification enabled status during setup.
+     */
+    fun setReminderEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(reminderEnabled = enabled) }
+    }
+
+    /**
      * Advances to the next step in the setup wizard.
      */
     fun nextStep() {

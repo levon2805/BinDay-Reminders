@@ -168,15 +168,7 @@ class SettingsViewModel(
         _userMessage.value = "Test notification sent! Check your notification panel."
     }
 
-    /**
-     * Restores standard UK council bin profiles.
-     */
-    fun resetDefaultBins() {
-        viewModelScope.launch {
-            repository.restoreStandardBins()
-            _userMessage.value = "Restored standard UK wheelie bin profile."
-        }
-    }
+
 
     /**
      * Clears all saved bins and resets onboarding state to allow entering a new address via [ResetTimetableUseCase].

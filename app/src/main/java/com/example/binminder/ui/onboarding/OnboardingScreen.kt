@@ -23,11 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.rounded.Add
@@ -77,6 +75,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -130,7 +129,9 @@ fun OnboardingScreen(
         onBinDaySelect = { binType, day -> viewModel.setBinCollectionDay(binType, day) },
         onAddCustomBin = { viewModel.addCustomBin() },
         onRenameBin = { binType, newName -> viewModel.renameBin(binType, newName) },
-        onReminderSettingsChange = { time, eveningBefore, enabled -> viewModel.setReminderSettings(time, eveningBefore, enabled) },
+        onUpdateEveningTime = { viewModel.updateEveningReminderTime(it) },
+        onUpdateMorningTime = { viewModel.updateMorningReminderTime(it) },
+        onReminderEnabledChange = { viewModel.setReminderEnabled(it) },
         onNextStep = { viewModel.nextStep() },
         onPreviousStep = { viewModel.previousStep() },
         onGoToStep = { viewModel.goToStep(it) },
@@ -158,7 +159,9 @@ fun OnboardingContent(
     onBinDaySelect: (String, DayOfWeek) -> Unit,
     onAddCustomBin: () -> Unit,
     onRenameBin: (String, String) -> Unit,
-    onReminderSettingsChange: (LocalTime, Boolean, Boolean) -> Unit,
+    onUpdateEveningTime: (LocalTime?) -> Unit,
+    onUpdateMorningTime: (LocalTime?) -> Unit,
+    onReminderEnabledChange: (Boolean) -> Unit,
     onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
     onGoToStep: (Int) -> Unit,
@@ -172,50 +175,34 @@ fun OnboardingContent(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_app_logo),
                             contentDescription = "BinDay Logo",
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(52.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                         )
                         Column {
                             Text(
-                                text = "SETUP WIZARD",
+                                text = "Setup Wizard",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "STEP ${uiState.currentStep}/4: " + when (uiState.currentStep) {
-                                    1 -> "COUNCIL"
-                                    2 -> "COLLECTION DAY"
-                                    3 -> "MY BINS"
-                                    4 -> "ALERTS"
+                                text = "Step ${uiState.currentStep}/4: " + when (uiState.currentStep) {
+                                    1 -> "Council"
+                                    2 -> "Collection Day"
+                                    3 -> "My Bins"
+                                    4 -> "Alerts"
                                     else -> ""
                                 },
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    if (uiState.currentStep > 1) {
-                        IconButton(
-                            onClick = onPreviousStep,
-                            modifier = Modifier
-                                .padding(start = 12.dp)
-                                .background(MaterialTheme.colorScheme.surface, CircleShape)
-                                .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -244,26 +231,39 @@ fun OnboardingContent(
                         Button(
                             onClick = onPreviousStep,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                         ) {
-                            Text("BACK", fontWeight = FontWeight.ExtraBold)
+                            Text("Back", fontWeight = FontWeight.SemiBold)
                         }
                     } else {
                         Spacer(modifier = Modifier.width(1.dp))
                     }
 
                     if (uiState.currentStep < 4) {
+                        val isNextEnabled = !uiState.isSearchingPostcode && canAdvanceFromCurrentStep
                         Button(
                             onClick = onNextStep,
-                            enabled = !uiState.isSearchingPostcode && canAdvanceFromCurrentStep,
+                            enabled = isNextEnabled,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            ),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isNextEnabled) 4.dp else 0.dp)
                         ) {
-                            Text("NEXT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            Text("Next", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
@@ -272,13 +272,21 @@ fun OnboardingContent(
                             )
                         }
                     } else {
+                        val isCompleteEnabled = !uiState.isCompleting
                         Button(
                             onClick = onCompleteSetup,
-                            enabled = !uiState.isCompleting,
+                            enabled = isCompleteEnabled,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            ),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.height(56.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isCompleteEnabled) 4.dp else 0.dp)
                         ) {
                             if (uiState.isCompleting) {
                                 CircularProgressIndicator(
@@ -286,7 +294,7 @@ fun OnboardingContent(
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("SAVING...", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                                Text("Saving...", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             } else {
                                 Icon(
                                     imageVector = Icons.Rounded.CheckCircle,
@@ -294,7 +302,7 @@ fun OnboardingContent(
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("LFG!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                                Text("Done", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -353,10 +361,12 @@ fun OnboardingContent(
                         onRenameBin = onRenameBin
                     )
                     4 -> Step4RemindersContent(
-                        reminderTime = uiState.reminderTime,
-                        reminderEveningBefore = uiState.reminderEveningBefore,
+                        eveningReminderTime = uiState.eveningReminderTime,
+                        morningReminderTime = uiState.morningReminderTime,
                         reminderEnabled = uiState.reminderEnabled,
-                        onSettingsChange = onReminderSettingsChange
+                        onUpdateEveningTime = onUpdateEveningTime,
+                        onUpdateMorningTime = onUpdateMorningTime,
+                        onReminderEnabledChange = onReminderEnabledChange
                     )
                 }
             }
@@ -410,16 +420,16 @@ fun Step1CouncilContent(
                 Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "FIND COUNCIL",
+                        text = "Find Council",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Enter your postcode to check if we have your council's timetable on file.",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
                 }
@@ -439,18 +449,20 @@ fun Step1CouncilContent(
                     }
                 }
             } else null,
-            label = { Text("UK POSTCODE", fontWeight = FontWeight.ExtraBold) },
-            placeholder = { Text("e.g. SW1A 1AA") },
+            label = { Text("UK Postcode", fontWeight = FontWeight.SemiBold) },
+            placeholder = { Text("e.g. SW1A 1AA", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             singleLine = true,
             enabled = !isSearching,
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+            modifier = Modifier.fillMaxWidth()
         )
 
         Button(
@@ -462,7 +474,6 @@ fun Step1CouncilContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             if (isSearching) {
                 CircularProgressIndicator(
@@ -471,7 +482,7 @@ fun Step1CouncilContent(
                     strokeWidth = 3.dp
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("SEARCHING...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Text("Searching...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             } else {
                 Icon(
                     imageVector = Icons.Rounded.Search,
@@ -479,7 +490,7 @@ fun Step1CouncilContent(
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("SEARCH", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Text("Search", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -516,16 +527,16 @@ fun Step1CouncilContent(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = "COUNCIL FOUND!",
+                                text = "Council Found!",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.sp
+                                letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = detectedCouncil.councilName.uppercase(),
+                                text = detectedCouncil.councilName,
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -550,8 +561,8 @@ fun Step1CouncilContent(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "OPEN COUNCIL WEBSITE",
-                            fontWeight = FontWeight.ExtraBold,
+                            text = "Open Council Website",
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -583,9 +594,9 @@ fun Step1CouncilContent(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = searchError.uppercase(),
+                            text = searchError,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
@@ -663,16 +674,16 @@ fun Step2CollectionDayContent(
                 Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "BIN DAY",
+                        text = "Bin Day",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "What day of the week are your bins collected?",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                     )
                 }
@@ -681,7 +692,7 @@ fun Step2CollectionDayContent(
 
         DayOfWeek.entries.forEach { day ->
             val isSelected = day == selectedDay
-            val dayName = day.getDisplayName(TextStyle.FULL, Locale.UK).uppercase()
+            val dayName = day.getDisplayName(TextStyle.FULL, Locale.UK)
 
             Card(
                 shape = RoundedCornerShape(8.dp),
@@ -704,7 +715,7 @@ fun Step2CollectionDayContent(
                     Text(
                         text = dayName,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                     )
 
@@ -773,16 +784,16 @@ fun Step3BinsContent(
                 Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "CONFIGURE BINS",
+                        text = "Configure Bins",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Set the colours, names, and collection schedule for your bins.",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
                     )
                 }
@@ -804,18 +815,37 @@ fun Step3BinsContent(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+                    // Full-width Bin Name Text Field at the top
+                    OutlinedTextField(
+                        value = setup.displayName,
+                        onValueChange = { onRenameBin(setup.binType, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        singleLine = true,
+                        label = { Text("Bin Name", fontWeight = FontWeight.SemiBold) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+
+                    // Swatch preview and enable toggle row below Bin Name
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f).padding(end = 12.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .size(56.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
@@ -824,24 +854,16 @@ fun Step3BinsContent(
                                 WheelieBinVisualSwatch(
                                     presetColor = setup.presetColor,
                                     lidPresetColor = setup.lidPresetColor,
-                                    size = 48.dp,
+                                    size = 40.dp,
                                     isEnabled = setup.isEnabled
                                 )
                             }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            OutlinedTextField(
-                                value = setup.displayName.uppercase(),
-                                onValueChange = { onRenameBin(setup.binType, it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                singleLine = true,
-                                label = { Text("BIN NAME", fontWeight = FontWeight.ExtraBold) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface
-                                )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = if (setup.isEnabled) "Active Bin" else "Disabled",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (setup.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
 
@@ -860,14 +882,15 @@ fun Step3BinsContent(
                     if (setup.isEnabled) {
                         val availableColors = listOf(
                             BinColor.BLACK,
-                            BinColor.DARK_GREY,
-                            BinColor.LIGHT_GREY,
+                            BinColor.GREY,
                             BinColor.BLUE,
                             BinColor.GREEN,
                             BinColor.BROWN,
-                            BinColor.PURPLE,
-                            BinColor.RED,
                             BinColor.YELLOW,
+                            BinColor.RED,
+                            BinColor.PURPLE,
+                            BinColor.DARK_GREY,
+                            BinColor.LIGHT_GREY,
                             BinColor.ORANGE,
                             BinColor.BURGUNDY,
                             BinColor.MAGENTA
@@ -886,9 +909,9 @@ fun Step3BinsContent(
                                 // Body Colour Picker
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(
-                                        text = "BODY COLOUR",
+                                        text = "Body Colour",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
 
@@ -899,19 +922,20 @@ fun Step3BinsContent(
                                         availableColors.forEach { color ->
                                             val colorHex = parseBinColor(color.defaultHex, color)
                                             val isSelected = setup.presetColor == color
+                                            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            val borderWidth = if (isSelected) 3.dp else 1.5.dp
 
                                             Box(
                                                 modifier = Modifier
                                                     .size(48.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(colorHex)
                                                     .border(
-                                                        width = 2.dp,
-                                                        color = MaterialTheme.colorScheme.outline,
+                                                        width = borderWidth,
+                                                        color = borderColor,
                                                         shape = RoundedCornerShape(8.dp)
                                                     )
-                                                    .clickable { onBinColorSelect(setup.binType, color) }
-                                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 2.dp),
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(colorHex)
+                                                    .clickable { onBinColorSelect(setup.binType, color) },
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (isSelected) {
@@ -968,9 +992,9 @@ fun Step3BinsContent(
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
-                                            text = "LID COLOUR",
+                                            text = "Lid Colour",
                                             style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.ExtraBold,
+                                            fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.secondary
                                         )
                                         Surface(
@@ -983,9 +1007,9 @@ fun Step3BinsContent(
                                                 .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (setup.lidPresetColor == null) 0.dp else 2.dp)
                                         ) {
                                             Text(
-                                                text = "MATCH",
+                                                text = "Match Body",
                                                 style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.ExtraBold,
+                                                fontWeight = FontWeight.SemiBold,
                                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                                             )
                                         }
@@ -998,19 +1022,20 @@ fun Step3BinsContent(
                                         availableColors.forEach { color ->
                                             val colorHex = parseBinColor(color.defaultHex, color)
                                             val isSelected = setup.lidPresetColor == color
+                                            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            val borderWidth = if (isSelected) 3.dp else 1.5.dp
 
                                             Box(
                                                 modifier = Modifier
                                                     .size(48.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(colorHex)
                                                     .border(
-                                                        width = 2.dp,
-                                                        color = MaterialTheme.colorScheme.outline,
+                                                        width = borderWidth,
+                                                        color = borderColor,
                                                         shape = RoundedCornerShape(8.dp)
                                                     )
-                                                    .clickable { onBinLidColorSelect(setup.binType, color) }
-                                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 2.dp),
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(colorHex)
+                                                    .clickable { onBinLidColorSelect(setup.binType, color) },
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (isSelected) {
@@ -1055,9 +1080,9 @@ fun Step3BinsContent(
                         }
 
                         Text(
-                            text = "COLLECTION DAY",
+                            text = "Collection Day",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -1079,9 +1104,9 @@ fun Step3BinsContent(
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 ) {
                                     Text(
-                                        text = currentDay?.name?.uppercase() ?: "SAME AS MAIN DAY",
+                                        text = currentDay?.getDisplayName(TextStyle.FULL, Locale.UK) ?: "Same as main day",
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -1094,7 +1119,7 @@ fun Step3BinsContent(
                             ) {
                                 DayOfWeek.entries.forEach { day ->
                                     DropdownMenuItem(
-                                        text = { Text(day.name.uppercase(), fontWeight = FontWeight.ExtraBold) },
+                                        text = { Text(day.getDisplayName(TextStyle.FULL, Locale.UK), fontWeight = FontWeight.SemiBold) },
                                         onClick = {
                                             onBinDaySelect(setup.binType, day)
                                             expandedDay = false
@@ -1105,9 +1130,9 @@ fun Step3BinsContent(
                         }
 
                         Text(
-                            text = "HOW OFTEN?",
+                            text = "Collection Frequency",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -1131,9 +1156,9 @@ fun Step3BinsContent(
                                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
                                 ) {
                                     Text(
-                                        text = rec.displayName.uppercase(),
+                                        text = rec.displayName,
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
@@ -1155,9 +1180,9 @@ fun Step3BinsContent(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     ) {
                                         Text(
-                                            text = if (isOtherSelected) "EVERY ${setup.recurrence.intervalWeeks} WEEKS" else "OTHER",
+                                            text = if (isOtherSelected) "Every ${setup.recurrence.intervalWeeks} weeks" else "Other",
                                             style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.ExtraBold
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -1170,7 +1195,7 @@ fun Step3BinsContent(
                                 ) {
                                     (3..8).forEach { weeks ->
                                         DropdownMenuItem(
-                                            text = { Text("EVERY $weeks WEEKS", fontWeight = FontWeight.ExtraBold) },
+                                            text = { Text("Every $weeks weeks", fontWeight = FontWeight.SemiBold) },
                                             onClick = {
                                                 val rec = RecurrenceType.entries.firstOrNull { it.intervalWeeks == weeks } ?: RecurrenceType.FORTNIGHTLY
                                                 onRecurrenceSelect(setup.binType, rec)
@@ -1185,9 +1210,9 @@ fun Step3BinsContent(
                         // 1-Tap Week Cycle Selectors ("Which bin goes out THIS coming week?")
                         if (setup.recurrence.intervalWeeks > 1) {
                             Text(
-                                text = "STARTING WHEN?",
+                                text = "Starting When?",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
@@ -1207,9 +1232,9 @@ fun Step3BinsContent(
                                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (!setup.startNextWeek) 0.dp else 4.dp)
                                 ) {
                                     Text(
-                                        text = "THIS WEEK",
+                                        text = "This Week",
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
@@ -1223,9 +1248,9 @@ fun Step3BinsContent(
                                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (setup.startNextWeek) 0.dp else 4.dp)
                                 ) {
                                     Text(
-                                        text = "NEXT WEEK",
+                                        text = "Next Week",
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
@@ -1249,7 +1274,7 @@ fun Step3BinsContent(
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text("ADD ANOTHER BIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Text("Add Another Bin", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
 
         if (activeColorPickerBinType != null) {
@@ -1263,7 +1288,7 @@ fun Step3BinsContent(
                 val initialPreset = if (isLidPicker) targetBin.lidPresetColor else targetBin.presetColor
 
                 ColorPickerDialog(
-                    title = if (isLidPicker) "SELECT LID COLOUR" else "SELECT BODY COLOUR",
+                    title = if (isLidPicker) "Select Lid Colour" else "Select Body Colour",
                     initialColorHex = initialHex,
                     initialPresetColor = initialPreset,
                     onColorSelected = { preset, _ ->
@@ -1286,10 +1311,12 @@ fun Step3BinsContent(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun Step4RemindersContent(
-    reminderTime: LocalTime,
-    reminderEveningBefore: Boolean,
+    eveningReminderTime: LocalTime?,
+    morningReminderTime: LocalTime?,
     reminderEnabled: Boolean,
-    onSettingsChange: (LocalTime, Boolean, Boolean) -> Unit
+    onUpdateEveningTime: (LocalTime?) -> Unit,
+    onUpdateMorningTime: (LocalTime?) -> Unit,
+    onReminderEnabledChange: (Boolean) -> Unit
 ) {
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var isEveningCustomTime by remember { mutableStateOf(true) }
@@ -1325,16 +1352,16 @@ fun Step4RemindersContent(
                 Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "GET ALERTED",
+                        text = "Get Alerted",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Never miss bin day again.",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1357,14 +1384,14 @@ fun Step4RemindersContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ENABLE ALERTS",
+                        text = "Enable Alerts",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.Bold
                     )
 
                     Switch(
                         checked = reminderEnabled,
-                        onCheckedChange = { onSettingsChange(reminderTime, reminderEveningBefore, it) },
+                        onCheckedChange = onReminderEnabledChange,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
@@ -1377,9 +1404,9 @@ fun Step4RemindersContent(
                 if (reminderEnabled) {
                     Column {
                         Text(
-                            text = "EVENING BEFORE",
+                            text = "Evening Before",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -1389,31 +1416,49 @@ fun Step4RemindersContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            val isEveningNone = eveningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isEveningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isEveningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateEveningTime(null) }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "None",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
                             listOf(
                                 LocalTime.of(19, 0) to "19:00",
                                 LocalTime.of(20, 0) to "20:00",
                                 LocalTime.of(21, 0) to "21:00"
                             ).forEach { (time, label) ->
-                                val isSelected = reminderEveningBefore && reminderTime == time
+                                val isSelected = eveningReminderTime == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
-                                        .clickable { onSettingsChange(time, true, true) }
+                                        .clickable { onUpdateEveningTime(time) }
                                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
                                 ) {
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
                             }
 
-                            val isEveningCustom = reminderEveningBefore && !listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0)).contains(reminderTime)
+                            val isEveningCustom = eveningReminderTime != null && eveningReminderTime !in listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isEveningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1427,20 +1472,20 @@ fun Step4RemindersContent(
                                     .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = if (isEveningCustom) "CUSTOM (${reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "CUSTOM",
+                                    text = if (isEveningCustom) "Custom (${eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
                         }
                     }
-                    
+
                     Column {
                         Text(
-                            text = "MORNING OF",
+                            text = "Morning Of",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -1450,31 +1495,49 @@ fun Step4RemindersContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            val isMorningNone = morningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isMorningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isMorningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateMorningTime(null) }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "None",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
                             listOf(
                                 LocalTime.of(6, 0) to "06:00",
                                 LocalTime.of(7, 0) to "07:00",
                                 LocalTime.of(8, 0) to "08:00"
                             ).forEach { (time, label) ->
-                                val isSelected = !reminderEveningBefore && reminderTime == time
+                                val isSelected = morningReminderTime == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
-                                        .clickable { onSettingsChange(time, false, true) }
+                                        .clickable { onUpdateMorningTime(time) }
                                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
                                 ) {
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
                             }
 
-                            val isMorningCustom = !reminderEveningBefore && !listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0)).contains(reminderTime)
+                            val isMorningCustom = morningReminderTime != null && morningReminderTime !in listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isMorningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1488,9 +1551,9 @@ fun Step4RemindersContent(
                                     .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = if (isMorningCustom) "CUSTOM (${reminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "CUSTOM",
+                                    text = if (isMorningCustom) "Custom (${morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -1502,9 +1565,10 @@ fun Step4RemindersContent(
     }
 
     if (showTimePickerDialog) {
+        val initialTime = if (isEveningCustomTime) (eveningReminderTime ?: LocalTime.of(19, 0)) else (morningReminderTime ?: LocalTime.of(7, 0))
         val timePickerState = rememberTimePickerState(
-            initialHour = reminderTime.hour,
-            initialMinute = reminderTime.minute,
+            initialHour = initialTime.hour,
+            initialMinute = initialTime.minute,
             is24Hour = true
         )
 
@@ -1515,13 +1579,17 @@ fun Step4RemindersContent(
                 Button(
                     onClick = {
                         val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                        onSettingsChange(selectedTime, isEveningCustomTime, reminderEnabled)
+                        if (isEveningCustomTime) {
+                            onUpdateEveningTime(selectedTime)
+                        } else {
+                            onUpdateMorningTime(selectedTime)
+                        }
                         showTimePickerDialog = false
                     },
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("SET TIME", fontWeight = FontWeight.ExtraBold)
+                    Text("Set Time", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -1531,7 +1599,7 @@ fun Step4RemindersContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             },
             text = {
@@ -1540,9 +1608,9 @@ fun Step4RemindersContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (isEveningCustomTime) "EVENING TIME" else "MORNING TIME",
+                        text = if (isEveningCustomTime) "Evening Time" else "Morning Time",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     TimePicker(state = timePickerState)
@@ -1572,7 +1640,9 @@ fun OnboardingScreenPreview() {
             onBinDaySelect = { _, _ -> },
             onAddCustomBin = {},
             onRenameBin = { _, _ -> },
-            onReminderSettingsChange = { _, _, _ -> },
+            onUpdateEveningTime = {},
+            onUpdateMorningTime = {},
+            onReminderEnabledChange = {},
             onNextStep = {},
             onPreviousStep = {},
             onGoToStep = {},

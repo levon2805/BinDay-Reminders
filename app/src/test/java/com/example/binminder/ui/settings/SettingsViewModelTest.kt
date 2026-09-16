@@ -79,14 +79,7 @@ class SettingsViewModelTest {
         assertFalse("onboardingCompleted should be set to false", fakeRepository.onboardingCompletedState)
     }
 
-    @Test
-    fun testRestoreStandardBins() = runTest {
-        viewModel.resetDefaultBins()
-        testDispatcher.scheduler.advanceUntilIdle()
 
-        assertTrue(fakeRepository.restoreStandardBinsCalled)
-        assertEquals("Restored standard UK wheelie bin profile.", viewModel.uiState.value.userMessage)
-    }
 
     @Test
     fun testToggleReminders() = runTest {

@@ -50,9 +50,11 @@ class DashboardViewModel(
 
     init {
         viewModelScope.launch {
-            repository.ensureDefaultBinsInitialized()
-            val initialPutOut = repository.putOutBins.first()
-            _putOutBins.value = initialPutOut
+            runCatching {
+                repository.ensureDefaultBinsInitialized()
+                val initialPutOut = repository.putOutBins.first()
+                _putOutBins.value = initialPutOut
+            }
         }
     }
 

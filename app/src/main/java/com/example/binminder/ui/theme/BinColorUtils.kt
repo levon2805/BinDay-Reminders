@@ -139,7 +139,7 @@ fun formatRecurrenceLabel(recurrence: RecurrenceType, startDate: LocalDate): Str
  * Formats a date using standard British English date order.
  */
 fun formatBritishDate(date: LocalDate, includeDayOfWeek: Boolean = true): String {
-    val pattern = if (includeDayOfWeek) "EEEE, d MMMM yyyy" else "d MMMM yyyy"
+    val pattern = if (includeDayOfWeek) "EEE, d MMM yyyy" else "d MMM yyyy"
     return date.format(DateTimeFormatter.ofPattern(pattern, Locale.UK))
 }
 
@@ -172,7 +172,7 @@ fun WheelieBinVisualSwatch(
         val lidColor = lidPresetColor?.let { parseBinColor(lidColorHex, it) } ?: bodyColor
         val alpha = if (isEnabled) 1.0f else 0.4f
         val strokeWidth = 1.4f
-        val outlineColor = Color(0x33000000).copy(alpha = 0.2f * alpha)
+        val outlineColor = Color.Black.copy(alpha = 0.35f * alpha)
     
         Canvas(
             modifier = modifier.size(size)

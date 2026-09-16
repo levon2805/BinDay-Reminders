@@ -64,7 +64,7 @@ class DefaultAppContainer(
         BinRepositoryImpl(
             binDao = database.binDao(),
             notificationSettingsDataStore = notificationSettingsDataStore,
-            context = context
+            context = applicationContext
         )
     }
 

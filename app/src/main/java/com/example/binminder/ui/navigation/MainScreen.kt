@@ -1,8 +1,11 @@
 package com.example.binminder.ui.navigation
 
+import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -12,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,23 +47,50 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val repository = appContainer.binRepository
-    val factory = remember(appContainer) { ViewModelFactory(appContainer) }
-    val backStack = rememberNavBackStack(Screen.Dashboard)
+    val onboardingCompletedState by repository.onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
 
-    val onboardingCompleted by repository.onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
-
-    LaunchedEffect(onboardingCompleted) {
-        if (onboardingCompleted == false) {
-            if (backStack.lastOrNull() != Screen.Onboarding) {
-                backStack.clear()
-                backStack.add(Screen.Onboarding)
+    when (val completed = onboardingCompletedState) {
+        null -> {
+            // Render a clean loading box / splash indicator while resolving onboarding status
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-        } else if (onboardingCompleted == true) {
-            repository.ensureDefaultBinsInitialized()
+        }
+        else -> {
+            val startDestination = if (completed) Screen.Dashboard else Screen.Onboarding
+            MainNavigationContent(
+                appContainer = appContainer,
+                startDestination = startDestination,
+                modifier = modifier
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainNavigationContent(
+    appContainer: AppContainer,
+    startDestination: Screen,
+    modifier: Modifier = Modifier
+) {
+    val repository = appContainer.binRepository
+    val factory = remember(appContainer) { ViewModelFactory(appContainer) }
+    val backStack = rememberNavBackStack(startDestination)
+
+    LaunchedEffect(startDestination) {
+        runCatching {
+            if (startDestination == Screen.Dashboard) {
+                repository.ensureDefaultBinsInitialized()
+            }
+        }.onFailure { exception ->
+            Log.e("BinDay", "Error initializing default bins in MainScreen", exception)
         }
     }
 
-    val currentScreen = backStack.lastOrNull() ?: Screen.Dashboard
+    val currentScreen = backStack.lastOrNull() ?: startDestination
     val isBottomBarVisible = currentScreen !is Screen.AddEditBin && currentScreen !is Screen.Onboarding
 
     Scaffold(
@@ -72,9 +103,13 @@ fun MainScreen(
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {
-                                if (!isSelected) {
-                                    backStack.clear()
-                                    backStack.add(item.screen)
+                                try {
+                                    if (!isSelected) {
+                                        backStack.clear()
+                                        backStack.add(item.screen)
+                                    }
+                                } catch (exception: Exception) {
+                                    Log.e("BinDay", "Error navigating to ${item.title} in MainScreen", exception)
                                 }
                             },
                             icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
@@ -89,8 +124,12 @@ fun MainScreen(
         NavDisplay(
             backStack = backStack,
             onBack = {
-                if (backStack.size > 1) {
-                    backStack.removeLastOrNull()
+                try {
+                    if (backStack.size > 1) {
+                        backStack.removeLastOrNull()
+                    }
+                } catch (exception: Exception) {
+                    Log.e("BinDay", "Error during onBack in MainScreen NavDisplay", exception)
                 }
             },
             modifier = Modifier
@@ -102,8 +141,12 @@ fun MainScreen(
                     OnboardingScreen(
                         viewModel = onboardingViewModel,
                         onOnboardingComplete = {
-                            backStack.clear()
-                            backStack.add(Screen.Dashboard)
+                            try {
+                                backStack.clear()
+                                backStack.add(Screen.Dashboard)
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to Dashboard on onboarding complete", exception)
+                            }
                         }
                     )
                 }
@@ -113,14 +156,26 @@ fun MainScreen(
                     DashboardScreen(
                         viewModel = dashboardViewModel,
                         onNavigateToAddBin = {
-                            backStack.add(Screen.AddEditBin())
+                            try {
+                                backStack.add(Screen.AddEditBin())
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to AddBin", exception)
+                            }
                         },
                         onNavigateToBinDetail = { binId ->
-                            backStack.add(Screen.AddEditBin(binId))
+                            try {
+                                backStack.add(Screen.AddEditBin(binId))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to BinDetail", exception)
+                            }
                         },
                         onNavigateToSettings = {
-                            backStack.clear()
-                            backStack.add(Screen.Settings)
+                            try {
+                                backStack.clear()
+                                backStack.add(Screen.Settings)
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to Settings", exception)
+                            }
                         }
                     )
                 }
@@ -130,10 +185,18 @@ fun MainScreen(
                     BinListScreen(
                         viewModel = binListViewModel,
                         onNavigateToAddBin = {
-                            backStack.add(Screen.AddEditBin())
+                            try {
+                                backStack.add(Screen.AddEditBin())
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to AddBin from BinList", exception)
+                            }
                         },
                         onNavigateToEditBin = { binId ->
-                            backStack.add(Screen.AddEditBin(binId))
+                            try {
+                                backStack.add(Screen.AddEditBin(binId))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to EditBin from BinList", exception)
+                            }
                         }
                     )
                 }
@@ -147,11 +210,15 @@ fun MainScreen(
                         viewModel = addEditViewModel,
                         binId = key.binId,
                         onNavigateBack = {
-                            if (backStack.size > 1) {
-                                backStack.removeLastOrNull()
-                            } else {
-                                backStack.clear()
-                                backStack.add(Screen.BinList)
+                            try {
+                                if (backStack.size > 1) {
+                                    backStack.removeLastOrNull()
+                                } else {
+                                    backStack.clear()
+                                    backStack.add(Screen.BinList)
+                                }
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating back from AddEditBin", exception)
                             }
                         }
                     )
@@ -162,8 +229,12 @@ fun MainScreen(
                     SettingsScreen(
                         viewModel = settingsViewModel,
                         onReRunSetupWizard = {
-                            backStack.clear()
-                            backStack.add(Screen.Onboarding)
+                            try {
+                                backStack.clear()
+                                backStack.add(Screen.Onboarding)
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error re-running setup wizard from Settings", exception)
+                            }
                         }
                     )
                 }

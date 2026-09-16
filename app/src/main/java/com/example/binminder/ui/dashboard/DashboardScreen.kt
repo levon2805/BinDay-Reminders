@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -147,22 +148,23 @@ fun DashboardContent(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_app_logo),
                             contentDescription = "BinDay Logo",
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
                         Column {
                             Text(
-                                text = "BINDAY",
+                                text = "BinDay",
                                 style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 2.sp
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
                             )
                         }
                     }
@@ -232,9 +234,9 @@ fun DashboardContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "TIMETABLE",
-                                    style = MaterialTheme.typography.displaySmall,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    text = "Upcoming Timetable",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 if (uiState.allBins.any { it.isEnabled }) {
@@ -256,9 +258,9 @@ fun DashboardContent(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "EXPORT",
+                                            text = "Export",
                                             style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.ExtraBold
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
@@ -304,11 +306,11 @@ fun NextCollectionHeroCard(
 
     val hasBankHolidayShift = events.any { it.isBankHolidayAdjusted }
 
-    // Display "TODAY" or "TOMORROW" very loud if applicable
+    // Display "Today" or "Tomorrow" if applicable
     val dayHeadline = when (daysRemaining) {
-        0L -> "TODAY!"
-        1L -> "TOMORROW!"
-        else -> formatRelativeDays(daysRemaining).uppercase()
+        0L -> "Today!"
+        1L -> "Tomorrow!"
+        else -> formatRelativeDays(daysRemaining)
     }
 
     Card(
@@ -332,31 +334,31 @@ fun NextCollectionHeroCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "NEXT UP",
+                    text = "Next Collection",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = onContainerColor,
-                    letterSpacing = 2.sp
+                    letterSpacing = 0.5.sp
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Big chunky relative day
+            // Big relative day
             Text(
                 text = dayHeadline,
                 style = MaterialTheme.typography.displayLarge,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             
             // Sub date
             Text(
-                text = formatBritishDate(nextDate).uppercase(),
+                text = formatBritishDate(nextDate),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = onContainerColor.copy(alpha = 0.8f),
-                letterSpacing = 1.sp
+                letterSpacing = 0.5.sp
             )
 
             // Bank Holiday Shift Banner
@@ -392,9 +394,9 @@ fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
     val shiftedDay = adjustedEvent?.collectionDate?.dayOfWeek?.getDisplayName(TextStyle.FULL, Locale.UK)
 
     val detailText = if (shiftedDay != null) {
-        "SHIFTED TO $shiftedDay!"
+        "Shifted to $shiftedDay!"
     } else {
-        "+1 DAY BANK HOLIDAY SHIFT!"
+        "+1 Day Bank Holiday Shift!"
     }
 
     Surface(
@@ -419,9 +421,9 @@ fun BankHolidayShiftBanner(events: List<CollectionEvent> = emptyList()) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = detailText.uppercase(),
+                    text = detailText,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onTertiary
                 )
             }
@@ -480,9 +482,9 @@ fun HeroBinItemCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = event.binName.uppercase(),
+                        text = event.binName,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -490,8 +492,8 @@ fun HeroBinItemCard(
                     )
                     if (event.customNote.isNotBlank()) {
                         Text(
-                            text = event.customNote.uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
+                            text = event.customNote,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -552,16 +554,16 @@ fun HeroBinItemCard(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = "DONE! BINS OUT",
+                                    text = "Bins Are Out",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = animatedContentColor
                                 )
                             } else {
                                 Text(
-                                    text = "PUT BINS OUT",
+                                    text = "Put Bins Out",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = animatedContentColor
                                 )
                             }
@@ -592,24 +594,27 @@ fun UpcomingDateSection(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier
-                .fillMaxWidth()
+                .width(220.dp)
                 .neoShadow(offset = 4.dp)
         ) {
             Row(
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.CalendarToday,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = formatBritishDate(date).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
+                    text = formatBritishDate(date),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
@@ -674,17 +679,17 @@ fun UpcomingEventCard(
                     .padding(end = 8.dp)
             ) {
                 Text(
-                    text = event.binName.uppercase(),
+                    text = event.binName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (event.customNote.isNotBlank()) {
                     Text(
-                        text = event.customNote.uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
+                        text = event.customNote,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -702,9 +707,9 @@ fun UpcomingEventCard(
                     border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(
-                        text = "+1D ($origDay➔$newDay)".uppercase(),
+                        text = "+1d ($origDay ➔ $newDay)",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
@@ -746,9 +751,9 @@ fun EmptyScheduleView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "NO SCHEDULED COLLECTIONS",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.ExtraBold,
+            text = "No Scheduled Collections",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -777,7 +782,7 @@ fun EmptyScheduleView(
         ) {
             Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(12.dp))
-            Text(text = "ADD A BIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Text(text = "Add a Bin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }

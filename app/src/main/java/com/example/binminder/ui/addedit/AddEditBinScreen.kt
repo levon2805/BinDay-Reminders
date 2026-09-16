@@ -167,7 +167,7 @@ fun AddEditBinContent(
     var showBankHolidayInfoDialog by remember { mutableStateOf(false) }
 
     val isEditing = uiState.binId != null && uiState.binId != 0L
-    val screenTitle = if (isEditing) "EDIT BIN" else "NEW BIN"
+    val screenTitle = if (isEditing) "Edit Bin" else "New Bin"
 
     Scaffold(
         topBar = {
@@ -176,8 +176,8 @@ fun AddEditBinContent(
                     Text(
                         text = screenTitle,
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 2.sp
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
                     )
                 },
                 navigationIcon = {
@@ -214,7 +214,7 @@ fun AddEditBinContent(
         ) {
             // Live Bin Preview Card Header with Dual-Colour Swatch
             BinPreviewHeader(
-                name = uiState.name.ifBlank { "BIN NAME" },
+                name = uiState.name.ifBlank { "Bin Name" },
                 presetColor = uiState.presetColor,
                 colorHex = uiState.colorHex,
                 lidPresetColor = uiState.lidPresetColor,
@@ -226,17 +226,17 @@ fun AddEditBinContent(
             // 1. Bin Name Input
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "BIN NAME",
+                    text = "Bin Name",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
                 OutlinedTextField(
-                    value = uiState.name.uppercase(),
+                    value = uiState.name,
                     onValueChange = onNameChange,
                     leadingIcon = {
                         Icon(imageVector = Icons.AutoMirrored.Rounded.Label, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
                     },
-                    placeholder = { Text("e.g. GENERAL WASTE") },
+                    placeholder = { Text("e.g. General Waste") },
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -262,9 +262,9 @@ fun AddEditBinContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "BODY COLOUR",
+                        text = "Body Colour",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -305,9 +305,9 @@ fun AddEditBinContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "HEX: ${uiState.colorHex.uppercase()}",
+                                text = "Hex: ${uiState.colorHex}",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Button(
@@ -316,7 +316,7 @@ fun AddEditBinContent(
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                             ) {
-                                Text("CHANGE", fontWeight = FontWeight.ExtraBold)
+                                Text("Change", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -335,14 +335,14 @@ fun AddEditBinContent(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "LID COLOUR",
+                            text = "Lid Colour",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Does the lid look different?",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -364,9 +364,9 @@ fun AddEditBinContent(
                             .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
                         Text(
-                            text = "MATCH BODY",
+                            text = "Match Body",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                         )
                     }
@@ -403,9 +403,9 @@ fun AddEditBinContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "LID HEX: ${(uiState.lidColorHex ?: "").uppercase()}",
+                                text = "Lid Hex: ${uiState.lidColorHex ?: ""}",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Button(
@@ -414,7 +414,7 @@ fun AddEditBinContent(
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                             ) {
-                                Text("CHANGE", fontWeight = FontWeight.ExtraBold)
+                                Text("Change", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -424,9 +424,9 @@ fun AddEditBinContent(
             // 4. Collection Schedule / Recurrence
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "HOW OFTEN?",
+                    text = "Collection Frequency",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
 
                 FlowRow(
@@ -454,9 +454,9 @@ fun AddEditBinContent(
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
                                 Text(
-                                    text = recurrence.displayName.uppercase(),
+                                    text = recurrence.displayName,
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.ExtraBold
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -467,9 +467,9 @@ fun AddEditBinContent(
             // 5. First Collection Date Picker
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "NEXT DATE",
+                    text = "Next Date",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
 
                 Card(
@@ -497,9 +497,9 @@ fun AddEditBinContent(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = formatBritishDate(uiState.startDate).uppercase(),
+                                text = formatBritishDate(uiState.startDate),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -537,9 +537,9 @@ fun AddEditBinContent(
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "BANK HOLIDAY SHIFT",
+                                    text = "Bank Holiday Shift",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 IconButton(
@@ -573,17 +573,18 @@ fun AddEditBinContent(
             // 7. Custom Instructions / Notes
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "NOTES (OPTIONAL)",
+                    text = "Notes (Optional)",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
                 OutlinedTextField(
-                    value = uiState.customNote.uppercase(),
+                    value = uiState.customNote,
                     onValueChange = onCustomNoteChange,
                     leadingIcon = {
                         Icon(imageVector = Icons.AutoMirrored.Rounded.Notes, contentDescription = null)
                     },
-                    placeholder = { Text("e.g. BY THE GATE") },
+                    placeholder = { Text("e.g. By the gate") },
+                    textStyle = MaterialTheme.typography.bodySmall,
                     minLines = 2,
                     maxLines = 4,
                     shape = RoundedCornerShape(8.dp),
@@ -618,7 +619,7 @@ fun AddEditBinContent(
                 ) {
                     Icon(imageVector = Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("SAVE BIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("Save Bin", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
                 
                 Button(
@@ -631,7 +632,7 @@ fun AddEditBinContent(
                         .height(56.dp)
                         .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                 ) {
-                    Text("CANCEL", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    Text("Cancel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -668,7 +669,7 @@ fun AddEditBinContent(
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Text("SELECT", fontWeight = FontWeight.ExtraBold)
+                    Text("Select", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -678,7 +679,7 @@ fun AddEditBinContent(
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             }
         ) {
@@ -688,7 +689,7 @@ fun AddEditBinContent(
 
     if (showBodyColorPickerDialog) {
         ColorPickerDialog(
-            title = "BODY COLOUR",
+            title = "Body Colour",
             initialColorHex = uiState.colorHex,
             initialPresetColor = uiState.presetColor,
             onColorSelected = { preset, hex ->
@@ -704,7 +705,7 @@ fun AddEditBinContent(
 
     if (showLidColorPickerDialog) {
         ColorPickerDialog(
-            title = "LID COLOUR",
+            title = "Lid Colour",
             initialColorHex = uiState.lidColorHex ?: uiState.colorHex,
             initialPresetColor = uiState.lidPresetColor,
             onColorSelected = { preset, hex ->
@@ -732,9 +733,9 @@ fun AddEditBinContent(
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "BANK HOLIDAY SHIFT",
+                    text = "Bank Holiday Shift",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
@@ -742,7 +743,6 @@ fun AddEditBinContent(
                 Text(
                     text = "When a UK bank holiday happens, we automatically bump this bin's collection date by +1 day (e.g. Friday ➔ Saturday).",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
@@ -754,7 +754,7 @@ fun AddEditBinContent(
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("GOT IT!", fontWeight = FontWeight.ExtraBold)
+                    Text("Got It", fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -813,16 +813,16 @@ fun BinPreviewHeader(
 
             Column {
                 Text(
-                    text = name.uppercase(),
+                    text = name,
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     color = binTextColor
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "${recurrence.displayName} • ${formatBritishDate(startDate, includeDayOfWeek = false)}".uppercase(),
+                    text = "${recurrence.displayName} • ${formatBritishDate(startDate, includeDayOfWeek = false)}",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = binTextColor.copy(alpha = 0.85f)
                 )
             }
@@ -868,9 +868,9 @@ fun ColorSwatchChip(
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
-                text = preset.displayName.uppercase(),
+                text = preset.displayName,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = textColor
             )
         }

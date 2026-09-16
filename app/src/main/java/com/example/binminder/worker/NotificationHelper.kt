@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.binminder.MainActivity
+import com.example.binminder.R
 
 /**
  * Helper object for building and posting bin collection system notifications.
@@ -78,7 +79,7 @@ object NotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(com.example.binminder.R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_app_logo)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))

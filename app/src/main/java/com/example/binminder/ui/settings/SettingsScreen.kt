@@ -75,10 +75,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -174,7 +178,6 @@ fun SettingsScreen(
                 viewModel.sendTestNotification(context)
             }
         },
-        onResetDefaultBins = { viewModel.resetDefaultBins() },
         onResetAndStartSetup = {
             viewModel.resetTimetableAndAddress(context) {
                 onReRunSetupWizard()
@@ -198,7 +201,6 @@ fun SettingsContent(
     onUpdateMorningTime: (LocalTime?) -> Unit,
     onUpdateSchedule: (LocalTime, Boolean) -> Unit = { _, _ -> },
     onSendTestNotification: () -> Unit,
-    onResetDefaultBins: () -> Unit,
     onResetAndStartSetup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -207,7 +209,6 @@ fun SettingsContent(
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var customTimeEveningBefore by remember { mutableStateOf(settings.reminderEveningBefore) }
     var showResetDialog by remember { mutableStateOf(false) }
-    var showRestoreDefaultsDialog by remember { mutableStateOf(false) }
     var isBankHolidaysExpanded by remember { mutableStateOf(false) }
     var showSubstituteHolidayInfoDialog by remember { mutableStateOf(false) }
     var showCalendarExportDialog by remember { mutableStateOf(false) }
@@ -223,13 +224,27 @@ fun SettingsContent(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "SETTINGS",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 2.sp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_app_logo),
+                            contentDescription = "BinDay Logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
+                        Column {
+                            Text(
+                                text = "Settings",
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -270,9 +285,9 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "NOTIFICATIONS",
+                            text = "Notifications",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -283,14 +298,14 @@ fun SettingsContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "PUSH ALERTS",
+                                text = "Push Alerts",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Remind me before collection day",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -311,9 +326,9 @@ fun SettingsContent(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "TIMING",
+                            text = "Timing",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
 
@@ -321,9 +336,9 @@ fun SettingsContent(
 
                         // Preset Schedule Options: Evening Before
                         Text(
-                            text = "EVENING BEFORE",
+                            text = "Evening Before",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -343,9 +358,9 @@ fun SettingsContent(
                                     .neoShadow(offset = if (isEveningNone) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = "NONE",
+                                    text = "None",
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -368,7 +383,7 @@ fun SettingsContent(
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
@@ -380,9 +395,9 @@ fun SettingsContent(
                                 LocalTime.of(21, 0)
                             )
                             val customEveningLabel = if (isEveningCustom) {
-                                "CUSTOM (${settings.eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "Custom (${settings.eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "CUSTOM..."
+                                "Custom..."
                             }
 
                             Surface(
@@ -400,7 +415,7 @@ fun SettingsContent(
                                 Text(
                                     text = customEveningLabel,
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -410,9 +425,9 @@ fun SettingsContent(
 
                         // Preset Schedule Options: Morning Of
                         Text(
-                            text = "MORNING OF",
+                            text = "Morning Of",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -432,9 +447,9 @@ fun SettingsContent(
                                     .neoShadow(offset = if (isMorningNone) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = "NONE",
+                                    text = "None",
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -457,7 +472,7 @@ fun SettingsContent(
                                     Text(
                                         text = label,
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
                                 }
@@ -469,9 +484,9 @@ fun SettingsContent(
                                 LocalTime.of(8, 0)
                             )
                             val customMorningLabel = if (isMorningCustom) {
-                                "CUSTOM (${settings.morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "Custom (${settings.morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
-                                "CUSTOM..."
+                                "Custom..."
                             }
 
                             Surface(
@@ -489,7 +504,7 @@ fun SettingsContent(
                                 Text(
                                     text = customMorningLabel,
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -517,7 +532,7 @@ fun SettingsContent(
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("TEST NOTIFICATION", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            Text("Test Notification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -553,9 +568,9 @@ fun SettingsContent(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = "BANK HOLIDAYS",
+                                text = "Bank Holidays",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
@@ -577,7 +592,7 @@ fun SettingsContent(
                             Text(
                                 text = "No upcoming bank holiday shifts found.",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
@@ -608,14 +623,14 @@ fun SettingsContent(
                                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                                                 ) {
                                                     Text(
-                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("dd MMM")).uppercase(),
+                                                        text = holidayDate.format(DateTimeFormatter.ofPattern("dd MMM")),
                                                         style = MaterialTheme.typography.labelLarge,
-                                                        fontWeight = FontWeight.ExtraBold
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                     Text(
                                                         text = holidayDate.format(DateTimeFormatter.ofPattern("yyyy")),
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        fontWeight = FontWeight.Bold
+                                                        fontWeight = FontWeight.Medium
                                                     )
                                                 }
                                             }
@@ -624,17 +639,17 @@ fun SettingsContent(
 
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = holidayName.uppercase(),
+                                                    text = holidayName,
                                                     style = MaterialTheme.typography.titleSmall,
-                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 shifts.forEach { shift ->
                                                     Text(
-                                                        text = "${shift.binName.uppercase()}: ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1D)",
+                                                        text = "${shift.binName}: ${shift.originalDayName} ➔ ${shift.shiftedDayName} (+1d)",
                                                         style = MaterialTheme.typography.labelMedium,
-                                                        fontWeight = FontWeight.Bold,
+                                                        fontWeight = FontWeight.Medium,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
@@ -670,9 +685,9 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "TIMETABLE",
+                            text = "Timetable",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -692,54 +707,7 @@ fun SettingsContent(
                     ) {
                         Icon(imageVector = Icons.Outlined.CalendarToday, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("ADD TO CALENDAR", fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = { showRestoreDefaultsDialog = true },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .neoShadow(offset = 4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .wrapContentHeight()
-                            ) {
-                                Text(
-                                    text = "Restore Standard UK Bins",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Resets your bins to default UK council profiles...",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.85f)
-                                )
-                            }
-                        }
+                        Text("Add to Calendar", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -757,9 +725,9 @@ fun SettingsContent(
                         Icon(imageVector = Icons.Rounded.RestartAlt, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "FACTORY RESET",
+                            text = "Factory Reset",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
@@ -787,47 +755,56 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "THEME",
+                            text = "Theme",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         AppThemeMode.entries.forEach { mode ->
                             val isSelected = uiState.themeMode == mode
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier
-                                    .clickable { onSetThemeMode(mode) }
-                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                                ) {
-                                    if (isSelected) {
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSetThemeMode(mode) },
+                                label = {
+                                    Text(
+                                        text = mode.label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                leadingIcon = if (isSelected) {
+                                    {
                                         Icon(
                                             imageVector = Icons.Rounded.Check,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
                                     }
-                                    Text(
-                                        text = mode.label.uppercase(),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                }
-                            }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = MaterialTheme.colorScheme.outline,
+                                    selectedBorderColor = MaterialTheme.colorScheme.outline,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 1.dp
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
@@ -837,50 +814,7 @@ fun SettingsContent(
         }
     }
 
-    // Restore Standard Bins Confirmation Dialogue
-    if (showRestoreDefaultsDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestoreDefaultsDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = {
-                Text(
-                    text = "RESTORE DEFAULTS?",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            },
-            text = {
-                Text(
-                    text = "This will delete all custom bins and restore the default UK set. Are you sure?",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showRestoreDefaultsDialog = false
-                        onResetDefaultBins()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("RESTORE", fontWeight = FontWeight.ExtraBold)
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showRestoreDefaultsDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
-                }
-            }
-        )
-    }
+
 
     // Reset Timetable Confirmation Dialogue
     if (showResetDialog) {
@@ -889,16 +823,15 @@ fun SettingsContent(
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "FACTORY RESET?",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.ExtraBold
+                    text = "Factory Reset?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = "This will wipe all bins, settings, and start the setup wizard over. Are you sure?",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.bodyLarge
                 )
             },
             confirmButton = {
@@ -911,7 +844,7 @@ fun SettingsContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("RESET ALL", fontWeight = FontWeight.ExtraBold)
+                    Text("Reset All", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -921,7 +854,7 @@ fun SettingsContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -952,7 +885,7 @@ fun SettingsContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("SET TIME", fontWeight = FontWeight.ExtraBold)
+                    Text("Set Time", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -962,7 +895,7 @@ fun SettingsContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("CANCEL", fontWeight = FontWeight.ExtraBold)
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             },
             text = {
@@ -971,9 +904,9 @@ fun SettingsContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (customTimeEveningBefore) "EVENING TIME" else "MORNING TIME",
+                        text = if (customTimeEveningBefore) "Evening Time" else "Morning Time",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     TimePicker(state = timePickerState)
@@ -997,16 +930,15 @@ fun SettingsContent(
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
-                    text = "SUBSTITUTE HOLIDAYS",
+                    text = "Substitute Holidays",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = BankHolidayCalculator.SUBSTITUTE_BANK_HOLIDAY_EXPLANATION,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.bodyLarge
                 )
             },
             confirmButton = {
@@ -1015,7 +947,7 @@ fun SettingsContent(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("COOL!", fontWeight = FontWeight.ExtraBold)
+                    Text("Got It", fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -1054,7 +986,6 @@ fun SettingsScreenPreview() {
             onUpdateMorningTime = {},
             onUpdateSchedule = { _, _ -> },
             onSendTestNotification = {},
-            onResetDefaultBins = {},
             onResetAndStartSetup = {}
         )
     }
