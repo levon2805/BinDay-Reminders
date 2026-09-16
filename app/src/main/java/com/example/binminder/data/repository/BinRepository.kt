@@ -76,6 +76,16 @@ interface BinRepository {
     suspend fun updateNotificationSettings(settings: NotificationSettings)
 
     /**
+     * Reactive flow of put out bin IDs.
+     */
+    val putOutBins: Flow<Set<Long>>
+
+    /**
+     * Updates set of put out bin IDs.
+     */
+    suspend fun updatePutOutBins(binIds: Set<Long>)
+
+    /**
      * Reactive flow of the active application theme preference.
      */
     val themeMode: Flow<AppThemeMode>

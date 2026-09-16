@@ -7,24 +7,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,16 +40,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
+import com.example.binminder.ui.theme.neoShadow
 import com.example.binminder.util.CalendarExportUtils
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private fun Modifier.maxHeightIn(max: Dp): Modifier = this.heightIn(max = max)
 
 /**
  * Material 3 AlertDialog enabling users to export individual recurring bin schedules to their calendar app,
@@ -66,50 +73,49 @@ fun CalendarExportDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             if (!isGuidedQueueMode) {
                 Text(
-                    text = "Add Bins to Calendar",
+                    text = "Sync to Calendar",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
             } else if (queueIndex < activeBins.size) {
                 Text(
-                    text = "Adding Bins to Calendar (${queueIndex + 1} of ${activeBins.size})",
+                    text = "Syncing (${queueIndex + 1}/${activeBins.size})",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
             } else {
                 Text(
-                    text = "Calendar Export Complete",
+                    text = "All Done!",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
             }
         },
         text = {
-            Column(modifier = modifier) {
+            Column(
+                modifier = modifier.wrapContentHeight(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 if (activeBins.isEmpty()) {
                     Text(
                         text = "No active bins available to export.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else if (!isGuidedQueueMode) {
-                    Text(
-                        text = "Select a bin to add its recurring collection schedule to your calendar app:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Column(
+                    // 1. Active Bins List at the top
+                    LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
+                            .fillMaxWidth()
+                            .maxHeightIn(max = 480.dp),
                     ) {
-                        activeBins.forEach { bin ->
+                        items(activeBins, key = { it.id }) { bin ->
                             val nextDate = CalendarExportUtils.calculateNextCollectionDate(bin)
                             val formattedDate = nextDate.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK))
                             val recurrenceLabel = bin.recurrence.displayName
@@ -120,9 +126,12 @@ fun CalendarExportDialog(
                                     CalendarExportUtils.exportBinToCalendar(context, bin, nextDate)
                                     onDismissRequest()
                                 },
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .neoShadow(offset = 4.dp),
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -135,7 +144,7 @@ fun CalendarExportDialog(
                                         colorHex = bin.colorHex,
                                         lidPresetColor = bin.lidPresetColor,
                                         lidColorHex = bin.lidColorHex,
-                                        size = 36.dp,
+                                        size = 40.dp,
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -147,66 +156,99 @@ fun CalendarExportDialog(
                                         )
                                         Text(
                                             text = subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        imageVector = Icons.Outlined.CalendarToday,
-                                        contentDescription = "Export ${bin.name} to calendar",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp),
-                                    )
+                                    IconButton(
+                                        onClick = {
+                                            CalendarExportUtils.exportBinToCalendar(context, bin, nextDate)
+                                            onDismissRequest()
+                                        },
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.CalendarToday,
+                                            contentDescription = "Export ${bin.name} to calendar",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Option 1: 1-Click Import All Bins (.ics)
+                    // 2. Clean Action Buttons Underneath (No Explanations)
                     Button(
                         onClick = {
                             CalendarExportUtils.exportAllBinsViaIcs(context, activeBins)
                             onDismissRequest()
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .neoShadow(offset = 4.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "1-Click Import All Bins (.ics)",
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FileDownload,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Import All Bins to Calendar (1-Click)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Option 2: Add All Bins (Guided Queue)
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             isGuidedQueueMode = true
                             queueIndex = 0
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .neoShadow(offset = 4.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Add All Bins",
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Add Bins One-by-One (Guided Setup)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 } else if (queueIndex < activeBins.size) {
                     // Guided Queue Mode
@@ -214,16 +256,17 @@ fun CalendarExportDialog(
                     val nextDate = CalendarExportUtils.calculateNextCollectionDate(currentBin)
                     val formattedDate = nextDate.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK))
                     val recurrenceLabel = currentBin.recurrence.displayName
-                    val binDetailText = "${currentBin.name} - $formattedDate ($recurrenceLabel)"
 
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .neoShadow(offset = 4.dp),
                     ) {
                         Row(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             WheelieBinVisualSwatch(
@@ -231,29 +274,27 @@ fun CalendarExportDialog(
                                 colorHex = currentBin.colorHex,
                                 lidPresetColor = currentBin.lidPresetColor,
                                 lidColorHex = currentBin.lidColorHex,
-                                size = 40.dp,
+                                size = 48.dp,
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = binDetailText,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    text = currentBin.name,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (currentBin.customNote.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = currentBin.customNote,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                Text(
+                                    text = "Next: $formattedDate ($recurrenceLabel)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Prominent Button
                     Button(
@@ -261,32 +302,39 @@ fun CalendarExportDialog(
                             CalendarExportUtils.exportBinToCalendar(context, currentBin, nextDate)
                             queueIndex++
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .neoShadow(offset = 4.dp),
                     ) {
                         Text(
-                            text = "Add '${currentBin.name}' to Calendar ➔",
-                            fontWeight = FontWeight.Bold,
+                            text = "Sync It ➔",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(
+                        Button(
                             onClick = { queueIndex++ },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         ) {
-                            Text("Skip")
-                        }
-
-                        TextButton(
-                            onClick = { queueIndex++ },
-                        ) {
-                            Text("Next Bin ➔")
+                            Text("Skip", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 } else {
@@ -294,19 +342,19 @@ fun CalendarExportDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CheckCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(64.dp),
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "✓ All bins added to your calendar!",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "✓ All Set!",
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
@@ -317,11 +365,15 @@ fun CalendarExportDialog(
         },
         confirmButton = {
             if ((isGuidedQueueMode) && (queueIndex >= activeBins.size)) {
-                Button(onClick = onDismissRequest) {
-                    Text("Done")
+                Button(
+                    onClick = onDismissRequest,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                ) {
+                    Text("Done", fontWeight = FontWeight.SemiBold)
                 }
             } else {
-                TextButton(
+                OutlinedButton(
                     onClick = {
                         if (isGuidedQueueMode) {
                             isGuidedQueueMode = false
@@ -329,9 +381,15 @@ fun CalendarExportDialog(
                         } else {
                             onDismissRequest()
                         }
-                    }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 ) {
-                    Text(if (isGuidedQueueMode) "Back" else "Cancel")
+                    Text(
+                        text = if (isGuidedQueueMode) "Back" else "Cancel",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         },
@@ -349,7 +407,7 @@ fun CalendarExportDialogPreview() {
             presetColor = BinColor.BLACK,
             recurrence = RecurrenceType.FORTNIGHTLY,
             repeatIntervalWeeks = 2,
-            startDate = LocalDate.now()
+            startDate = LocalDate.now(),
         ),
         Bin(
             id = 2,
@@ -358,7 +416,7 @@ fun CalendarExportDialogPreview() {
             presetColor = BinColor.BLUE,
             recurrence = RecurrenceType.FORTNIGHTLY,
             repeatIntervalWeeks = 2,
-            startDate = LocalDate.now().plusWeeks(1)
+            startDate = LocalDate.now().plusWeeks(1),
         ),
         Bin(
             id = 3,
@@ -367,14 +425,14 @@ fun CalendarExportDialogPreview() {
             presetColor = BinColor.GREEN,
             recurrence = RecurrenceType.EVERY_3_WEEKS,
             repeatIntervalWeeks = 3,
-            startDate = LocalDate.now().plusDays(3)
-        )
+            startDate = LocalDate.now().plusDays(3),
+        ),
     )
 
     BinMinderTheme {
         CalendarExportDialog(
             bins = sampleBins,
-            onDismissRequest = {}
+            onDismissRequest = {},
         )
     }
 }

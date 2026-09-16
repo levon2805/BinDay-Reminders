@@ -1,6 +1,7 @@
 package com.example.binminder
 
 import android.app.Application
+import android.util.Log
 import com.example.binminder.di.AppContainer
 import com.example.binminder.di.DefaultAppContainer
 import com.example.binminder.worker.NotificationHelper
@@ -16,12 +17,21 @@ class BinMinderApplication : Application() {
     /**
      * Dependency container instance providing application-wide thread-safe singleton dependencies.
      */
-    lateinit var container: AppContainer
-        private set
+    val container: AppContainer by lazy {
+        try {
+            DefaultAppContainer(this)
+        } catch (exception: Exception) {
+            Log.e("BinDay", "Error initializing AppContainer in BinMinderApplication", exception)
+            throw exception
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
-        container = DefaultAppContainer(this)
-        NotificationHelper.createNotificationChannel(this)
+        try {
+            NotificationHelper.createNotificationChannel(this)
+        } catch (exception: Throwable) {
+            Log.e("BinDay", "Error creating notification channel in BinMinderApplication", exception)
+        }
     }
 }

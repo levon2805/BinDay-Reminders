@@ -113,55 +113,57 @@ class BinRepositoryImpl(
      * Populates sensible default UK bin choices if local storage is empty on [Dispatchers.IO].
      */
     override suspend fun ensureDefaultBinsInitialized(): Unit = withContext(Dispatchers.IO) {
-        if (binDao.getBinCount() == 0) {
-            val today = LocalDate.now()
-            val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        runCatching {
+            if (binDao.getBinCount() == 0) {
+                val today = LocalDate.now()
+                val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
-            val defaultBins = listOf(
-                Bin(
-                    name = "General Waste",
-                    colorHex = BinColor.BLACK.defaultHex,
-                    presetColor = BinColor.BLACK,
-                    recurrence = RecurrenceType.FORTNIGHTLY,
-                    startDate = currentMonday,
-                    customNote = "Black bin for non-recyclable household waste. Put out by 7:00 AM.",
-                    isEnabled = true,
-                    adjustForBankHolidays = true
-                ),
-                Bin(
-                    name = "Dry Mixed Recycling",
-                    colorHex = BinColor.BLUE.defaultHex,
-                    presetColor = BinColor.BLUE,
-                    recurrence = RecurrenceType.FORTNIGHTLY,
-                    startDate = currentMonday.plusWeeks(1),
-                    customNote = "Blue bin for paper, cardboard, plastic bottles, and cans.",
-                    isEnabled = true,
-                    adjustForBankHolidays = true
-                ),
-                Bin(
-                    name = "Garden Waste",
-                    colorHex = BinColor.GREEN.defaultHex,
-                    presetColor = BinColor.GREEN,
-                    recurrence = RecurrenceType.FORTNIGHTLY,
-                    startDate = currentMonday,
-                    customNote = "Green bin for grass cuttings, leaves, and small hedge trimmings.",
-                    isEnabled = true,
-                    adjustForBankHolidays = true
-                ),
-                Bin(
-                    name = "Food Waste Caddy",
-                    colorHex = BinColor.BROWN.defaultHex,
-                    presetColor = BinColor.BROWN,
-                    recurrence = RecurrenceType.WEEKLY,
-                    startDate = currentMonday,
-                    customNote = "Brown caddy for food scraps and kitchen leftovers.",
-                    isEnabled = true,
-                    adjustForBankHolidays = true
+                val defaultBins = listOf(
+                    Bin(
+                        name = "General Waste",
+                        colorHex = BinColor.BLACK.defaultHex,
+                        presetColor = BinColor.BLACK,
+                        recurrence = RecurrenceType.FORTNIGHTLY,
+                        startDate = currentMonday,
+                        customNote = "Black bin for non-recyclable household waste. Put out by 7:00 AM.",
+                        isEnabled = true,
+                        adjustForBankHolidays = true
+                    ),
+                    Bin(
+                        name = "Dry Mixed Recycling",
+                        colorHex = BinColor.BLUE.defaultHex,
+                        presetColor = BinColor.BLUE,
+                        recurrence = RecurrenceType.FORTNIGHTLY,
+                        startDate = currentMonday.plusWeeks(1),
+                        customNote = "Blue bin for paper, cardboard, plastic bottles, and cans.",
+                        isEnabled = true,
+                        adjustForBankHolidays = true
+                    ),
+                    Bin(
+                        name = "Garden Waste",
+                        colorHex = BinColor.GREEN.defaultHex,
+                        presetColor = BinColor.GREEN,
+                        recurrence = RecurrenceType.FORTNIGHTLY,
+                        startDate = currentMonday,
+                        customNote = "Green bin for grass cuttings, leaves, and small hedge trimmings.",
+                        isEnabled = true,
+                        adjustForBankHolidays = true
+                    ),
+                    Bin(
+                        name = "Food Waste Caddy",
+                        colorHex = BinColor.BROWN.defaultHex,
+                        presetColor = BinColor.BROWN,
+                        recurrence = RecurrenceType.WEEKLY,
+                        startDate = currentMonday,
+                        customNote = "Brown caddy for food scraps and kitchen leftovers.",
+                        isEnabled = true,
+                        adjustForBankHolidays = true
+                    )
                 )
-            )
 
-            binDao.insertBins(defaultBins.map { BinEntity.fromDomain(it) })
-            triggerScheduleUpdate()
+                binDao.insertBins(defaultBins.map { BinEntity.fromDomain(it) })
+                triggerScheduleUpdate()
+            }
         }
     }
 
@@ -235,6 +237,19 @@ class BinRepositoryImpl(
     }
 
     /**
+     * Observes set of put out bin IDs as a flow on [Dispatchers.IO].
+     */
+    override val putOutBins: Flow<Set<Long>> =
+        notificationSettingsDataStore.putOutBinIds.flowOn(Dispatchers.IO)
+
+    /**
+     * Updates set of put out bin IDs on [Dispatchers.IO].
+     */
+    override suspend fun updatePutOutBins(binIds: Set<Long>): Unit = withContext(Dispatchers.IO) {
+        notificationSettingsDataStore.setPutOutBinIds(binIds)
+    }
+
+    /**
      * Observes active theme choices as a flow on [Dispatchers.IO].
      */
     override val themeMode: Flow<AppThemeMode> =
@@ -269,6 +284,12 @@ class BinRepositoryImpl(
         binSetups: List<OnboardingBinSetup>,
         notificationSettings: NotificationSettings
     ): Unit = withContext(Dispatchers.IO) {
+        val currentTheme = notificationSettingsDataStore.themeMode.first()
+        val settingsWithPreservedTheme = if (notificationSettings.themeMode == AppThemeMode.SYSTEM && currentTheme != AppThemeMode.SYSTEM) {
+            notificationSettings.copy(themeMode = currentTheme)
+        } else {
+            notificationSettings
+        }
         notificationSettingsDataStore.saveOnboardingInfo(postcodeOrCouncil, primaryDay.name)
 
         binDao.deleteAllBins()
@@ -304,7 +325,7 @@ class BinRepositoryImpl(
             binDao.insertBins(newBins.map { BinEntity.fromDomain(it) })
         }
 
-        updateNotificationSettings(notificationSettings)
+        updateNotificationSettings(settingsWithPreservedTheme)
         setOnboardingCompleted(true)
     }
 

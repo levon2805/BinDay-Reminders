@@ -289,6 +289,20 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun testEveningAndMorningReminderTimeUpdates() {
+        val eveningTime = LocalTime.of(20, 0)
+        viewModel.updateEveningReminderTime(eveningTime)
+        assertEquals(eveningTime, viewModel.uiState.value.eveningReminderTime)
+
+        val morningTime = LocalTime.of(7, 30)
+        viewModel.updateMorningReminderTime(morningTime)
+        assertEquals(morningTime, viewModel.uiState.value.morningReminderTime)
+
+        viewModel.setReminderEnabled(false)
+        assertFalse(viewModel.uiState.value.reminderEnabled)
+    }
+
+    @Test
     fun testCompleteSetup() = runTest {
         viewModel.setPostcodeOrCouncil("Birmingham City Council")
         viewModel.setPrimaryCollectionDay(DayOfWeek.THURSDAY)
@@ -359,6 +373,8 @@ class OnboardingViewModelTest {
 
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
+        override val putOutBins: Flow<Set<Long>> = flowOf(emptySet())
+        override suspend fun updatePutOutBins(binIds: Set<Long>) {}
 
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)
         override suspend fun setThemeMode(themeMode: AppThemeMode) {}

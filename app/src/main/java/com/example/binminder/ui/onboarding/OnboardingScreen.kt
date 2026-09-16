@@ -1,10 +1,10 @@
 package com.example.binminder.ui.onboarding
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,12 +23,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -40,9 +40,7 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Search
-import com.example.binminder.ui.theme.ColorPickerDialog
-import androidx.compose.material.icons.Icons.Default
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -51,55 +49,56 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.painterResource
-import com.example.binminder.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.binminder.R
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CouncilScheduleResult
 import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.ui.theme.BinMinderTheme
+import com.example.binminder.ui.theme.ColorPickerDialog
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.getContrastingTextColor
 import com.example.binminder.ui.theme.parseBinColor
+import com.example.binminder.ui.theme.neoShadow
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.TextStyle
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -130,7 +129,9 @@ fun OnboardingScreen(
         onBinDaySelect = { binType, day -> viewModel.setBinCollectionDay(binType, day) },
         onAddCustomBin = { viewModel.addCustomBin() },
         onRenameBin = { binType, newName -> viewModel.renameBin(binType, newName) },
-        onReminderSettingsChange = { time, eveningBefore, enabled -> viewModel.setReminderSettings(time, eveningBefore, enabled) },
+        onUpdateEveningTime = { viewModel.updateEveningReminderTime(it) },
+        onUpdateMorningTime = { viewModel.updateMorningReminderTime(it) },
+        onReminderEnabledChange = { viewModel.setReminderEnabled(it) },
         onNextStep = { viewModel.nextStep() },
         onPreviousStep = { viewModel.previousStep() },
         onGoToStep = { viewModel.goToStep(it) },
@@ -158,7 +159,9 @@ fun OnboardingContent(
     onBinDaySelect: (String, DayOfWeek) -> Unit,
     onAddCustomBin: () -> Unit,
     onRenameBin: (String, String) -> Unit,
-    onReminderSettingsChange: (LocalTime, Boolean, Boolean) -> Unit,
+    onUpdateEveningTime: (LocalTime?) -> Unit,
+    onUpdateMorningTime: (LocalTime?) -> Unit,
+    onReminderEnabledChange: (Boolean) -> Unit,
     onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
     onGoToStep: (Int) -> Unit,
@@ -172,115 +175,134 @@ fun OnboardingContent(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_app_logo),
                             contentDescription = "BinDay Logo",
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
                         Column {
                             Text(
-                                text = "BinDay Setup Wizard",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "Setup Wizard",
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Step ${uiState.currentStep} of 4: " + when (uiState.currentStep) {
-                                    1 -> "Your Council"
+                                text = "Step ${uiState.currentStep}/4: " + when (uiState.currentStep) {
+                                    1 -> "Council"
                                     2 -> "Collection Day"
-                                    3 -> "Bins & Lid Colours"
-                                    4 -> "Reminder Alerts"
+                                    3 -> "My Bins"
+                                    4 -> "Alerts"
                                     else -> ""
                                 },
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 },
-                navigationIcon = {
-                    if (uiState.currentStep > 1) {
-                        IconButton(onClick = onPreviousStep) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         bottomBar = {
             Surface(
-                tonalElevation = 3.dp,
                 color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(24.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (uiState.currentStep > 1) {
-                        OutlinedButton(
+                        Button(
                             onClick = onPreviousStep,
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Back")
+                            Text("Back", fontWeight = FontWeight.SemiBold)
                         }
                     } else {
                         Spacer(modifier = Modifier.width(1.dp))
                     }
 
                     if (uiState.currentStep < 4) {
+                        val isNextEnabled = !uiState.isSearchingPostcode && canAdvanceFromCurrentStep
                         Button(
                             onClick = onNextStep,
-                            enabled = !uiState.isSearchingPostcode && canAdvanceFromCurrentStep,
-                            shape = RoundedCornerShape(16.dp)
+                            enabled = isNextEnabled,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isNextEnabled) 4.dp else 0.dp)
                         ) {
-                            Text("Next")
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Next", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.width(8.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     } else {
+                        val isCompleteEnabled = !uiState.isCompleting
                         Button(
                             onClick = onCompleteSetup,
-                            enabled = !uiState.isCompleting,
-                            shape = RoundedCornerShape(16.dp)
+                            enabled = isCompleteEnabled,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isCompleteEnabled) 4.dp else 0.dp)
                         ) {
                             if (uiState.isCompleting) {
                                 CircularProgressIndicator(
                                     color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Setting Up...")
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Saving...", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             } else {
                                 Icon(
                                     imageVector = Icons.Rounded.CheckCircle,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Complete Setup")
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Done", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -299,9 +321,9 @@ fun OnboardingContent(
                 progress = { uiState.currentStep / 4f },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp),
+                    .height(8.dp),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                trackColor = MaterialTheme.colorScheme.outline
             )
 
             // Step Content Animated Transition
@@ -312,7 +334,7 @@ fun OnboardingContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) { step ->
                 when (step) {
                     1 -> Step1CouncilContent(
@@ -331,7 +353,7 @@ fun OnboardingContent(
                         binSetups = uiState.binSetups,
                         onBinToggle = onBinToggle,
                         onRecurrenceSelect = onBinRecurrenceSelect,
-                        onStartNextWeekToggle = onBinStartNextWeekToggle,
+                        onBinStartNextWeekToggle = onBinStartNextWeekToggle,
                         onBinColorSelect = onBinColorSelect,
                         onBinLidColorSelect = onBinLidColorSelect,
                         onBinDaySelect = onBinDaySelect,
@@ -339,10 +361,12 @@ fun OnboardingContent(
                         onRenameBin = onRenameBin
                     )
                     4 -> Step4RemindersContent(
-                        reminderTime = uiState.reminderTime,
-                        reminderEveningBefore = uiState.reminderEveningBefore,
+                        eveningReminderTime = uiState.eveningReminderTime,
+                        morningReminderTime = uiState.morningReminderTime,
                         reminderEnabled = uiState.reminderEnabled,
-                        onSettingsChange = onReminderSettingsChange
+                        onUpdateEveningTime = onUpdateEveningTime,
+                        onUpdateMorningTime = onUpdateMorningTime,
+                        onReminderEnabledChange = onReminderEnabledChange
                     )
                 }
             }
@@ -352,7 +376,7 @@ fun OnboardingContent(
 
 /**
  * Step 1 composable for identifying the user's local council via postcode
- * and providing a link to the council's website for schedule information.
+ * with progress cards and council match success banners.
  */
 @Composable
 fun Step1CouncilContent(
@@ -366,44 +390,46 @@ fun Step1CouncilContent(
     val uriHandler = LocalUriHandler.current
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.LocationOn,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "Find Your Council",
+                        text = "Find Council",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Enter your UK postcode to identify your local council. You can then check their website for your collection schedule.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Enter your postcode to check if we have your council's timetable on file.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
                 }
@@ -411,10 +437,10 @@ fun Step1CouncilContent(
         }
 
         OutlinedTextField(
-            value = postcodeOrCouncil,
+            value = postcodeOrCouncil.uppercase(),
             onValueChange = onQueryChange,
             leadingIcon = {
-                Icon(imageVector = Icons.Rounded.Search, contentDescription = null)
+                Icon(imageVector = Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
             },
             trailingIcon = if (postcodeOrCouncil.isNotEmpty()) {
                 {
@@ -423,79 +449,61 @@ fun Step1CouncilContent(
                     }
                 }
             } else null,
-            label = { Text("UK Postcode") },
-            placeholder = { Text("Enter UK Postcode, e.g. SW1A 1AA or M1 1AE") },
+            label = { Text("UK Postcode", fontWeight = FontWeight.SemiBold) },
+            placeholder = { Text("e.g. SW1A 1AA", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             singleLine = true,
             enabled = !isSearching,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
             modifier = Modifier.fillMaxWidth()
         )
 
         Button(
             onClick = onSearchClick,
             enabled = postcodeOrCouncil.isNotBlank() && !isSearching,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(64.dp)
         ) {
             if (isSearching) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    strokeWidth = 3.dp
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Identifying Council...")
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Searching...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             } else {
                 Icon(
                     imageVector = Icons.Rounded.Search,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Find My Council", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Search", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
 
-        if (isSearching) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "Looking up council for ${postcodeOrCouncil.trim()}...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        // Council identified successfully
+        // Council Match Success Banner
         if (detectedCouncil != null && !isSearching) {
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(
@@ -503,30 +511,33 @@ fun Step1CouncilContent(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = "Your Council",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                text = "Council Found!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
                             )
                             Text(
                                 text = detectedCouncil.councilName,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
@@ -538,46 +549,23 @@ fun Step1CouncilContent(
                                 uriHandler.openUri(detectedCouncil.councilWebSearchUrl)
                             } catch (_: Exception) { }
                         },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth().height(48.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.OpenInNew,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Visit ${detectedCouncil.councilName} Website",
-                            fontWeight = FontWeight.Bold,
+                            text = "Open Council Website",
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                    }
-
-                    // Helpful guidance text
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Check your council's website to find out your collection day, which bins you have, and how often they're collected. You'll set these up in the next steps.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }
@@ -586,15 +574,14 @@ fun Step1CouncilContent(
         // Error state
         if (searchError != null && !isSearching) {
             Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.error, offset = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -603,13 +590,13 @@ fun Step1CouncilContent(
                             imageVector = Icons.Rounded.Info,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Text(
                             text = searchError,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
@@ -617,27 +604,29 @@ fun Step1CouncilContent(
             }
         }
 
-        // Skip option — always visible
+        // Skip option
         if (detectedCouncil == null && !isSearching) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "You can skip this step and set up your bins manually. Tap 'Next' to continue.",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "Not found? Just tap NEXT to set up your bins manually.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -647,8 +636,7 @@ fun Step1CouncilContent(
 }
 
 /**
- * Step 2 composable for selecting primary collection day.
- * No day is pre-selected — the user must choose their actual collection day.
+ * Step 2 composable for selecting primary collection day with clear day cards.
  */
 @Composable
 fun Step2CollectionDayContent(
@@ -656,73 +644,47 @@ fun Step2CollectionDayContent(
     onDaySelected: (DayOfWeek) -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondary),
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondary)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.CalendarMonth,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "Primary Collection Day",
+                        text = "Bin Day",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Which day of the week are your household bins collected?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
-                    )
-                }
-            }
-        }
-
-        // Show a hint if no day selected yet
-        if (selectedDay == null) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Please select your collection day to continue.",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "What day of the week are your bins collected?",
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                     )
                 }
             }
@@ -733,41 +695,36 @@ fun Step2CollectionDayContent(
             val dayName = day.getDisplayName(TextStyle.FULL, Locale.UK)
 
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    }
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                 ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onDaySelected(day) }
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = dayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                     )
 
                     if (isSelected) {
                         Icon(
                             imageVector = Icons.Rounded.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                 }
@@ -777,7 +734,8 @@ fun Step2CollectionDayContent(
 }
 
 /**
- * Step 3 composable for selecting bins, editing names, and choosing collection frequencies.
+ * Step 3 composable for selecting bins, editing names, choosing body/lid colors,
+ * and 1-tap week cycle selectors ("Which bin goes out THIS coming week?").
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -785,7 +743,7 @@ fun Step3BinsContent(
     binSetups: List<OnboardingBinSetup>,
     onBinToggle: (String) -> Unit,
     onRecurrenceSelect: (String, RecurrenceType) -> Unit,
-    onStartNextWeekToggle: (String, Boolean) -> Unit,
+    onBinStartNextWeekToggle: (String, Boolean) -> Unit,
     onBinColorSelect: (String, BinColor) -> Unit,
     onBinLidColorSelect: (String, BinColor?) -> Unit,
     onBinDaySelect: (String, DayOfWeek) -> Unit,
@@ -796,44 +754,46 @@ fun Step3BinsContent(
     var isLidPicker by remember { mutableStateOf(false) }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.tertiary),
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.tertiary)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onTertiary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "Customise Bins & Lid Colours",
+                        text = "Configure Bins",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Rename bins, choose body and lid colours, and set collection frequencies.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Set the colours, names, and collection schedule for your bins.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
                     )
                 }
@@ -842,121 +802,139 @@ fun Step3BinsContent(
 
         binSetups.forEach { setup ->
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                        alpha = if (setup.isEnabled) 0.8f else 0.3f
-                    )
+                    containerColor = if (setup.isEnabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant
                 ),
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (setup.isEnabled) 6.dp else 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+                    // Full-width Bin Name Text Field at the top
+                    OutlinedTextField(
+                        value = setup.displayName,
+                        onValueChange = { onRenameBin(setup.binType, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        singleLine = true,
+                        label = { Text("Bin Name", fontWeight = FontWeight.SemiBold) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+
+                    // Swatch preview and enable toggle row below Bin Name
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 8.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 WheelieBinVisualSwatch(
                                     presetColor = setup.presetColor,
                                     lidPresetColor = setup.lidPresetColor,
-                                    size = 32.dp,
+                                    size = 40.dp,
                                     isEnabled = setup.isEnabled
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            OutlinedTextField(
-                                value = setup.displayName,
-                                onValueChange = { onRenameBin(setup.binType, it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                singleLine = true,
-                                label = { Text("Bin Name") },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface
-                                )
+                            Text(
+                                text = if (setup.isEnabled) "Active Bin" else "Disabled",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (setup.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
 
                         Switch(
                             checked = setup.isEnabled,
-                            onCheckedChange = { onBinToggle(setup.binType) }
+                            onCheckedChange = { onBinToggle(setup.binType) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedBorderColor = MaterialTheme.colorScheme.outline,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                            )
                         )
                     }
 
                     if (setup.isEnabled) {
                         val availableColors = listOf(
                             BinColor.BLACK,
-                            BinColor.DARK_GREY,
-                            BinColor.LIGHT_GREY,
+                            BinColor.GREY,
                             BinColor.BLUE,
                             BinColor.GREEN,
                             BinColor.BROWN,
-                            BinColor.PURPLE,
-                            BinColor.RED,
                             BinColor.YELLOW,
+                            BinColor.RED,
+                            BinColor.PURPLE,
+                            BinColor.DARK_GREY,
+                            BinColor.LIGHT_GREY,
                             BinColor.ORANGE,
                             BinColor.BURGUNDY,
                             BinColor.MAGENTA
                         )
 
-                        // Better visual separation for body vs lid
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 1.dp,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(20.dp)
                             ) {
                                 // Body Colour Picker
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(
-                                        text = "Bin Body Colour",
-                                        style = MaterialTheme.typography.labelMedium,
+                                        text = "Body Colour",
+                                        style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
 
                                     FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         availableColors.forEach { color ->
                                             val colorHex = parseBinColor(color.defaultHex, color)
                                             val isSelected = setup.presetColor == color
+                                            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            val borderWidth = if (isSelected) 3.dp else 1.5.dp
 
                                             Box(
                                                 modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(colorHex)
+                                                    .size(48.dp)
                                                     .border(
-                                                        width = if (isSelected) 3.dp else 1.dp,
-                                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f),
-                                                        shape = CircleShape
+                                                        width = borderWidth,
+                                                        color = borderColor,
+                                                        shape = RoundedCornerShape(8.dp)
                                                     )
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(colorHex)
                                                     .clickable { onBinColorSelect(setup.binType, color) },
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -965,86 +943,98 @@ fun Step3BinsContent(
                                                         imageVector = Icons.Rounded.Check,
                                                         contentDescription = color.displayName,
                                                         tint = getContrastingTextColor(colorHex),
-                                                        modifier = Modifier.size(18.dp)
+                                                        modifier = Modifier.size(24.dp)
                                                     )
                                                 }
                                             }
                                         }
 
-                                        // Custom Colour Picker Wheel Button
+                                        // Custom Colour Picker Button
                                         Box(
                                             modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
+                                                .size(48.dp)
+                                                .clip(RoundedCornerShape(8.dp))
                                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                                 .border(
-                                                    width = if (setup.presetColor == BinColor.CUSTOM) 3.dp else 1.dp,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    shape = CircleShape
+                                                    width = 2.dp,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                    shape = RoundedCornerShape(8.dp)
                                                 )
                                                 .clickable {
                                                     activeColorPickerBinType = setup.binType
                                                     isLidPicker = false
-                                                },
+                                                }
+                                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 2.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Palette,
                                                 contentDescription = "Colour Wheel Picker",
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(20.dp)
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         }
                                     }
                                 }
 
-                                // Separator
                                 Spacer(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .height(2.dp)
+                                        .background(MaterialTheme.colorScheme.outline)
                                 )
 
                                 // Lid Colour Picker
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
-                                            text = "Bin Lid Colour",
-                                            style = MaterialTheme.typography.labelMedium,
+                                            text = "Lid Colour",
+                                            style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.secondary
                                         )
-                                        FilterChip(
-                                            selected = setup.lidPresetColor == null,
-                                            onClick = { onBinLidColorSelect(setup.binType, null) },
-                                            label = { Text("Same as Body") },
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (setup.lidPresetColor == null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surface,
+                                            contentColor = if (setup.lidPresetColor == null) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                            modifier = Modifier
+                                                .clickable { onBinLidColorSelect(setup.binType, null) }
+                                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (setup.lidPresetColor == null) 0.dp else 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "Match Body",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                            )
+                                        }
                                     }
 
                                     FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         availableColors.forEach { color ->
                                             val colorHex = parseBinColor(color.defaultHex, color)
                                             val isSelected = setup.lidPresetColor == color
+                                            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            val borderWidth = if (isSelected) 3.dp else 1.5.dp
 
                                             Box(
                                                 modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(colorHex)
+                                                    .size(48.dp)
                                                     .border(
-                                                        width = if (isSelected) 3.dp else 1.dp,
-                                                        color = if (isSelected) MaterialTheme.colorScheme.secondary else Color.White.copy(alpha = 0.5f),
-                                                        shape = CircleShape
+                                                        width = borderWidth,
+                                                        color = borderColor,
+                                                        shape = RoundedCornerShape(8.dp)
                                                     )
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(colorHex)
                                                     .clickable { onBinLidColorSelect(setup.binType, color) },
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -1053,34 +1043,35 @@ fun Step3BinsContent(
                                                         imageVector = Icons.Rounded.Check,
                                                         contentDescription = color.displayName,
                                                         tint = getContrastingTextColor(colorHex),
-                                                        modifier = Modifier.size(18.dp)
+                                                        modifier = Modifier.size(24.dp)
                                                     )
                                                 }
                                             }
                                         }
 
-                                        // Custom Lid Colour Picker Wheel Button
+                                        // Custom Lid Colour Picker Button
                                         Box(
                                             modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
+                                                .size(48.dp)
+                                                .clip(RoundedCornerShape(8.dp))
                                                 .background(MaterialTheme.colorScheme.secondaryContainer)
                                                 .border(
-                                                    width = if (setup.lidPresetColor == BinColor.CUSTOM) 3.dp else 1.dp,
-                                                    color = MaterialTheme.colorScheme.secondary,
-                                                    shape = CircleShape
+                                                    width = 2.dp,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                    shape = RoundedCornerShape(8.dp)
                                                 )
                                                 .clickable {
                                                     activeColorPickerBinType = setup.binType
                                                     isLidPicker = true
-                                                },
+                                                }
+                                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 2.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Palette,
                                                 contentDescription = "Lid Colour Wheel Picker",
                                                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.size(20.dp)
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         }
                                     }
@@ -1090,35 +1081,46 @@ fun Step3BinsContent(
 
                         Text(
                             text = "Collection Day",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp)
                         )
 
                         var expandedDay by remember { mutableStateOf(false) }
                         val currentDay = setup.collectionDay
-                        
+
                         Box {
-                            FilterChip(
-                                selected = currentDay != null,
-                                onClick = { expandedDay = true },
-                                label = { 
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { expandedDay = true }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
                                     Text(
-                                        currentDay?.name?.lowercase()?.replaceFirstChar { it.titlecase(java.util.Locale.UK) } ?: "Same as Primary"
-                                    ) 
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-                            )
+                                        text = currentDay?.getDisplayName(TextStyle.FULL, Locale.UK) ?: "Same as main day",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                            
                             DropdownMenu(
                                 expanded = expandedDay,
                                 onDismissRequest = { expandedDay = false }
                             ) {
-                                DayOfWeek.values().forEach { day ->
+                                DayOfWeek.entries.forEach { day ->
                                     DropdownMenuItem(
-                                        text = { Text(day.name.lowercase().replaceFirstChar { it.titlecase(java.util.Locale.UK) }) },
-                                        onClick = { 
+                                        text = { Text(day.getDisplayName(TextStyle.FULL, Locale.UK), fontWeight = FontWeight.SemiBold) },
+                                        onClick = {
                                             onBinDaySelect(setup.binType, day)
                                             expandedDay = false
                                         }
@@ -1129,56 +1131,72 @@ fun Step3BinsContent(
 
                         Text(
                             text = "Collection Frequency",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp)
                         )
 
                         var expandedWeeks by remember { mutableStateOf(false) }
-                        
+
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             listOf(RecurrenceType.WEEKLY, RecurrenceType.FORTNIGHTLY).forEach { rec ->
                                 val isSelected = setup.recurrence == rec
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { onRecurrenceSelect(setup.binType, rec) },
-                                    label = { Text(rec.displayName) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onRecurrenceSelect(setup.binType, rec) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = rec.displayName,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
-                                )
+                                }
                             }
-                            
+
                             val isOtherSelected = setup.recurrence.intervalWeeks > 2
                             Box {
-                                FilterChip(
-                                    selected = isOtherSelected,
-                                    onClick = { expandedWeeks = true },
-                                    label = { 
-                                        Text(if (isOtherSelected) "Every ${setup.recurrence.intervalWeeks} Weeks" else "Other")
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isOtherSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isOtherSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { expandedWeeks = true }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isOtherSelected) 0.dp else 4.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isOtherSelected) "Every ${setup.recurrence.intervalWeeks} weeks" else "Other",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                    }
+                                }
+                                
                                 DropdownMenu(
                                     expanded = expandedWeeks,
                                     onDismissRequest = { expandedWeeks = false }
                                 ) {
                                     (3..8).forEach { weeks ->
                                         DropdownMenuItem(
-                                            text = { Text("Every $weeks Weeks") },
-                                            onClick = { 
+                                            text = { Text("Every $weeks weeks", fontWeight = FontWeight.SemiBold) },
+                                            onClick = {
                                                 val rec = RecurrenceType.entries.firstOrNull { it.intervalWeeks == weeks } ?: RecurrenceType.FORTNIGHTLY
                                                 onRecurrenceSelect(setup.binType, rec)
                                                 expandedWeeks = false
@@ -1189,49 +1207,74 @@ fun Step3BinsContent(
                             }
                         }
 
+                        // 1-Tap Week Cycle Selectors ("Which bin goes out THIS coming week?")
                         if (setup.recurrence.intervalWeeks > 1) {
                             Text(
-                                text = "Alternating Offset",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "Starting When?",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 8.dp)
                             )
 
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                FilterChip(
-                                    selected = !setup.startNextWeek,
-                                    onClick = { onStartNextWeekToggle(setup.binType, false) },
-                                    label = { Text("Starts This Week") },
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                FilterChip(
-                                    selected = setup.startNextWeek,
-                                    onClick = { onStartNextWeekToggle(setup.binType, true) },
-                                    label = { Text("Starts Next Week") },
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (!setup.startNextWeek) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (!setup.startNextWeek) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onBinStartNextWeekToggle(setup.binType, false) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (!setup.startNextWeek) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = "This Week",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (setup.startNextWeek) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (setup.startNextWeek) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onBinStartNextWeekToggle(setup.binType, true) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (setup.startNextWeek) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Next Week",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        OutlinedButton(
+
+        Button(
             onClick = onAddCustomBin,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            shape = RoundedCornerShape(16.dp)
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(top = 8.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(28.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add Other Bin", fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Add Another Bin", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
 
         if (activeColorPickerBinType != null) {
@@ -1245,7 +1288,7 @@ fun Step3BinsContent(
                 val initialPreset = if (isLidPicker) targetBin.lidPresetColor else targetBin.presetColor
 
                 ColorPickerDialog(
-                    title = if (isLidPicker) "Select ${targetBin.displayName} Lid Colour" else "Select ${targetBin.displayName} Body Colour",
+                    title = if (isLidPicker) "Select Lid Colour" else "Select Body Colour",
                     initialColorHex = initialHex,
                     initialPresetColor = initialPreset,
                     onColorSelected = { preset, _ ->
@@ -1268,69 +1311,72 @@ fun Step3BinsContent(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun Step4RemindersContent(
-    reminderTime: LocalTime,
-    reminderEveningBefore: Boolean,
+    eveningReminderTime: LocalTime?,
+    morningReminderTime: LocalTime?,
     reminderEnabled: Boolean,
-    onSettingsChange: (LocalTime, Boolean, Boolean) -> Unit
+    onUpdateEveningTime: (LocalTime?) -> Unit,
+    onUpdateMorningTime: (LocalTime?) -> Unit,
+    onReminderEnabledChange: (Boolean) -> Unit
 ) {
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var isEveningCustomTime by remember { mutableStateOf(true) }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Notifications,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column {
                     Text(
-                        text = "Reminder Preferences",
+                        text = "Get Alerted",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Choose when you want to receive push notifications before collection day.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        text = "Never miss bin day again.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
 
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().neoShadow(color = MaterialTheme.colorScheme.outline, offset = 6.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1338,106 +1384,180 @@ fun Step4RemindersContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Enable Collection Alerts",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Enable Alerts",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
 
                     Switch(
                         checked = reminderEnabled,
-                        onCheckedChange = { onSettingsChange(reminderTime, reminderEveningBefore, it) }
+                        onCheckedChange = onReminderEnabledChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedBorderColor = MaterialTheme.colorScheme.outline,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
                 }
 
                 if (reminderEnabled) {
-                    Text(
-                        text = "Evening Before Collection",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf(
-                            LocalTime.of(19, 0) to "19:00 (7 PM)",
-                            LocalTime.of(20, 0) to "20:00 (8 PM)",
-                            LocalTime.of(21, 0) to "21:00 (9 PM)"
-                        ).forEach { (time, label) ->
-                            val isSelected = reminderEveningBefore && reminderTime == time
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onSettingsChange(time, true, true) },
-                                label = { Text(label) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                        }
-                        
-                        FilterChip(
-                            selected = reminderEveningBefore && !listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0)).contains(reminderTime),
-                            onClick = {
-                                isEveningCustomTime = true
-                                showTimePickerDialog = true
-                            },
-                            label = { 
-                                val isCustomEvening = reminderEveningBefore && !listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0)).contains(reminderTime)
-                                Text(if (isCustomEvening) "${reminderTime.hour.toString().padStart(2, '0')}:${reminderTime.minute.toString().padStart(2, '0')} (Custom)" else "Custom Time")
-                            },
-                            shape = RoundedCornerShape(12.dp)
+                    Column {
+                        Text(
+                            text = "Evening Before",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val isEveningNone = eveningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isEveningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isEveningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateEveningTime(null) }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "None",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
+                            listOf(
+                                LocalTime.of(19, 0) to "19:00",
+                                LocalTime.of(20, 0) to "20:00",
+                                LocalTime.of(21, 0) to "21:00"
+                            ).forEach { (time, label) ->
+                                val isSelected = eveningReminderTime == time
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onUpdateEveningTime(time) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+                            }
+
+                            val isEveningCustom = eveningReminderTime != null && eveningReminderTime !in listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isEveningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isEveningCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable {
+                                        isEveningCustomTime = true
+                                        showTimePickerDialog = true
+                                    }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = if (isEveningCustom) "Custom (${eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Morning Of Collection",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf(
-                            LocalTime.of(6, 0) to "06:00 (6 AM)",
-                            LocalTime.of(7, 0) to "07:00 (7 AM)",
-                            LocalTime.of(8, 0) to "08:00 (8 AM)"
-                        ).forEach { (time, label) ->
-                            val isSelected = !reminderEveningBefore && reminderTime == time
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onSettingsChange(time, false, true) },
-                                label = { Text(label) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                        }
-
-                        FilterChip(
-                            selected = !reminderEveningBefore && !listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0)).contains(reminderTime),
-                            onClick = {
-                                isEveningCustomTime = false
-                                showTimePickerDialog = true
-                            },
-                            label = { 
-                                val isCustomMorning = !reminderEveningBefore && !listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0)).contains(reminderTime)
-                                Text(if (isCustomMorning) "${reminderTime.hour.toString().padStart(2, '0')}:${reminderTime.minute.toString().padStart(2, '0')} (Custom)" else "Custom Time")
-                            },
-                            shape = RoundedCornerShape(12.dp)
+                    Column {
+                        Text(
+                            text = "Morning Of",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val isMorningNone = morningReminderTime == null
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isMorningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isMorningNone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable { onUpdateMorningTime(null) }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningNone) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = "None",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
+                            listOf(
+                                LocalTime.of(6, 0) to "06:00",
+                                LocalTime.of(7, 0) to "07:00",
+                                LocalTime.of(8, 0) to "08:00"
+                            ).forEach { (time, label) ->
+                                val isSelected = morningReminderTime == time
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .clickable { onUpdateMorningTime(time) }
+                                        .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isSelected) 0.dp else 4.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+                            }
+
+                            val isMorningCustom = morningReminderTime != null && morningReminderTime !in listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isMorningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isMorningCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .clickable {
+                                        isEveningCustomTime = false
+                                        showTimePickerDialog = true
+                                    }
+                                    .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningCustom) 0.dp else 4.dp)
+                            ) {
+                                Text(
+                                    text = if (isMorningCustom) "Custom (${morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1445,28 +1565,41 @@ fun Step4RemindersContent(
     }
 
     if (showTimePickerDialog) {
+        val initialTime = if (isEveningCustomTime) (eveningReminderTime ?: LocalTime.of(19, 0)) else (morningReminderTime ?: LocalTime.of(7, 0))
         val timePickerState = rememberTimePickerState(
-            initialHour = reminderTime.hour,
-            initialMinute = reminderTime.minute,
+            initialHour = initialTime.hour,
+            initialMinute = initialTime.minute,
             is24Hour = true
         )
 
         AlertDialog(
             onDismissRequest = { showTimePickerDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                        onSettingsChange(selectedTime, isEveningCustomTime, reminderEnabled)
+                        if (isEveningCustomTime) {
+                            onUpdateEveningTime(selectedTime)
+                        } else {
+                            onUpdateMorningTime(selectedTime)
+                        }
                         showTimePickerDialog = false
-                    }
+                    },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Set Time")
+                    Text("Set Time", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePickerDialog = false }) {
-                    Text("Cancel")
+                Button(
+                    onClick = { showTimePickerDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             },
             text = {
@@ -1475,7 +1608,7 @@ fun Step4RemindersContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (isEveningCustomTime) "Select Custom Evening Time" else "Select Custom Morning Time",
+                        text = if (isEveningCustomTime) "Evening Time" else "Morning Time",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -1507,7 +1640,9 @@ fun OnboardingScreenPreview() {
             onBinDaySelect = { _, _ -> },
             onAddCustomBin = {},
             onRenameBin = { _, _ -> },
-            onReminderSettingsChange = { _, _, _ -> },
+            onUpdateEveningTime = {},
+            onUpdateMorningTime = {},
+            onReminderEnabledChange = {},
             onNextStep = {},
             onPreviousStep = {},
             onGoToStep = {},

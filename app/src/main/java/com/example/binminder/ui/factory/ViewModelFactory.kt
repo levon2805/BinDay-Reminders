@@ -1,5 +1,6 @@
 package com.example.binminder.ui.factory
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.binminder.di.AppContainer
@@ -23,39 +24,57 @@ class ViewModelFactory(
      */
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return when {
-            modelClass.isAssignableFrom(OnboardingViewModel::class.java) -> {
-                OnboardingViewModel(
-                    repository = appContainer.binRepository,
-                    councilLookupRepository = appContainer.councilLookupRepository,
-                    lookupCouncilScheduleUseCase = appContainer.lookupCouncilScheduleUseCase
-                ) as T
+        return try {
+            when {
+                modelClass.isAssignableFrom(OnboardingViewModel::class.java) ||
+                OnboardingViewModel::class.java.isAssignableFrom(modelClass) -> {
+                    OnboardingViewModel(
+                        repository = appContainer.binRepository,
+                        councilLookupRepository = appContainer.councilLookupRepository,
+                        lookupCouncilScheduleUseCase = appContainer.lookupCouncilScheduleUseCase
+                    ) as T
+                }
+                modelClass.isAssignableFrom(DashboardViewModel::class.java) ||
+                DashboardViewModel::class.java.isAssignableFrom(modelClass) -> {
+                    DashboardViewModel(
+                        repository = appContainer.binRepository,
+                        getUpcomingCollectionsUseCase = appContainer.getUpcomingCollectionsUseCase,
+                        toggleBinPutOutUseCase = appContainer.toggleBinPutOutUseCase
+                    ) as T
+                }
+                modelClass.isAssignableFrom(BinListViewModel::class.java) ||
+                BinListViewModel::class.java.isAssignableFrom(modelClass) -> {
+                    BinListViewModel(
+                        repository = appContainer.binRepository,
+                        resetTimetableUseCase = appContainer.resetTimetableUseCase
+                    ) as T
+                }
+                modelClass.isAssignableFrom(AddEditBinViewModel::class.java) ||
+                AddEditBinViewModel::class.java.isAssignableFrom(modelClass) -> {
+                    AddEditBinViewModel(
+                        repository = appContainer.binRepository
+                    ) as T
+                }
+                modelClass.isAssignableFrom(SettingsViewModel::class.java) ||
+                SettingsViewModel::class.java.isAssignableFrom(modelClass) -> {
+                    SettingsViewModel(
+                        repository = appContainer.binRepository,
+                        resetTimetableUseCase = appContainer.resetTimetableUseCase
+                    ) as T
+                }
+                else -> {
+                    Log.e("BinDay", "Unhandled ViewModel class requested in ViewModelFactory: ${modelClass.name}. Attempting fallback construction.")
+                    try {
+                        modelClass.getDeclaredConstructor().newInstance()
+                    } catch (e: Exception) {
+                        Log.e("BinDay", "Reflective instantiation failed for ViewModel class: ${modelClass.name}", e)
+                        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}", e)
+                    }
+                }
             }
-            modelClass.isAssignableFrom(DashboardViewModel::class.java) -> {
-                DashboardViewModel(
-                    repository = appContainer.binRepository,
-                    getUpcomingCollectionsUseCase = appContainer.getUpcomingCollectionsUseCase,
-                    toggleBinPutOutUseCase = appContainer.toggleBinPutOutUseCase
-                ) as T
-            }
-            modelClass.isAssignableFrom(BinListViewModel::class.java) -> {
-                BinListViewModel(
-                    repository = appContainer.binRepository,
-                    resetTimetableUseCase = appContainer.resetTimetableUseCase
-                ) as T
-            }
-            modelClass.isAssignableFrom(AddEditBinViewModel::class.java) -> {
-                AddEditBinViewModel(
-                    repository = appContainer.binRepository
-                ) as T
-            }
-            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                SettingsViewModel(
-                    repository = appContainer.binRepository,
-                    resetTimetableUseCase = appContainer.resetTimetableUseCase
-                ) as T
-            }
-            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+        } catch (exception: Exception) {
+            Log.e("BinDay", "Error creating ViewModel instance for ${modelClass.name}", exception)
+            throw exception
         }
     }
 }

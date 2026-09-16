@@ -9,6 +9,7 @@ import com.example.binminder.data.repository.BinRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -40,6 +41,31 @@ class ResetTimetableUseCaseTest {
         assertFalse(onboardingCompletedValue!!)
     }
 
+    @Test
+    fun testResetTimetablePreservesThemeMode() = runTest {
+        var clearAllBinsCalled = false
+        var savedTheme: AppThemeMode? = null
+
+        val fakeRepo = object : FakeBinRepository() {
+            override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.DARK)
+
+            override suspend fun clearAllBins() {
+                clearAllBinsCalled = true
+            }
+
+            override suspend fun setThemeMode(themeMode: AppThemeMode) {
+                savedTheme = themeMode
+            }
+        }
+
+        val useCase = ResetTimetableUseCase(fakeRepo)
+        val result = useCase()
+
+        assertTrue(result.isSuccess)
+        assertTrue(clearAllBinsCalled)
+        assertEquals(AppThemeMode.DARK, savedTheme)
+    }
+
     private open class FakeBinRepository : BinRepository {
         override val allBins: Flow<List<Bin>> = flowOf(emptyList())
         override suspend fun getBinsList(): List<Bin> = emptyList()
@@ -53,6 +79,8 @@ class ResetTimetableUseCaseTest {
         override suspend fun restoreStandardBins() {}
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
+        override val putOutBins: Flow<Set<Long>> = flowOf(emptySet())
+        override suspend fun updatePutOutBins(binIds: Set<Long>) {}
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)
         override suspend fun setThemeMode(themeMode: AppThemeMode) {}
         override val onboardingCompleted: Flow<Boolean> = flowOf(false)

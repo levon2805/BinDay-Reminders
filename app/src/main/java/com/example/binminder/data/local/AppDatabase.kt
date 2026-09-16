@@ -28,8 +28,12 @@ abstract class AppDatabase : RoomDatabase() {
          */
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE bins ADD COLUMN lidColorHex TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE bins ADD COLUMN lidPresetColor TEXT DEFAULT NULL")
+                try {
+                    db.execSQL("ALTER TABLE bins ADD COLUMN lidColorHex TEXT DEFAULT NULL")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE bins ADD COLUMN lidPresetColor TEXT DEFAULT NULL")
+                } catch (_: Exception) {}
             }
         }
 
@@ -44,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "binminder_database"
                 )
                 .addMigrations(MIGRATION_1_2)
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance
