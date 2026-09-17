@@ -253,10 +253,7 @@ object NotificationScheduler {
                 context = context.applicationContext,
                 title = "BinDay Test Reminder 🚛",
                 message = "Test reminder successful! Your wheelie bin collection notifications are configured correctly.",
-                notificationId = 9999,
-                binIds = listOf(-1L), // Dummy ID so the "Done" button appears in the test
-                binNames = "Test Bin",
-                targetDateStr = LocalDate.now().toString()
+                notificationId = 9999
             )
         } catch (_: Throwable) {}
     }

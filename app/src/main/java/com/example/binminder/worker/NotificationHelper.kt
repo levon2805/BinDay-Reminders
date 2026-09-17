@@ -158,4 +158,16 @@ object NotificationHelper {
             NotificationManagerCompat.from(context).cancel(notificationId)
         } catch (_: Exception) {}
     }
+
+    /**
+     * Clears the anti-spam debounce cache.
+     * Should be called whenever the user explicitly changes their reminder time or bin configuration
+     * so that immediate testing is not blocked by the 1-hour anti-spam window.
+     */
+    fun clearDebounceCache(context: Context) {
+        context.getSharedPreferences("notification_debounce", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .apply()
+    }
 }

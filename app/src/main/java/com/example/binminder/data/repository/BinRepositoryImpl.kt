@@ -12,6 +12,7 @@ import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.engine.ScheduleEngine
+import com.example.binminder.worker.NotificationHelper
 import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -232,6 +233,7 @@ class BinRepositoryImpl(
      */
     override suspend fun updateNotificationSettings(settings: NotificationSettings): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.updateSettings(settings)
+        NotificationHelper.clearDebounceCache(applicationContext)
         NotificationScheduler.scheduleNotificationWorker(applicationContext, settings)
     }
 
