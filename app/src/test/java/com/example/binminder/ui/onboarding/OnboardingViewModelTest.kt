@@ -373,8 +373,8 @@ class OnboardingViewModelTest {
 
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
-        override val putOutBins: Flow<Set<Long>> = flowOf(emptySet())
-        override suspend fun updatePutOutBins(binIds: Set<Long>) {}
+        override val putOutBins: Flow<Set<String>> = flowOf(emptySet())
+        override suspend fun updatePutOutBins(binIds: Set<String>) {}
 
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)
         override suspend fun setThemeMode(themeMode: AppThemeMode) {}

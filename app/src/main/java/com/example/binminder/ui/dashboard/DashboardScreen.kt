@@ -111,7 +111,7 @@ fun DashboardScreen(
     DashboardContent(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        onMarkBinPutOut = { binId, name -> viewModel.markBinPutOut(binId, name, context) },
+        onMarkBinPutOut = { binId, date, name -> viewModel.markBinPutOut(binId, date, name, context) },
         onNavigateToAddBin = onNavigateToAddBin,
         onNavigateToBinDetail = onNavigateToBinDetail,
         onNavigateToSettings = onNavigateToSettings,
@@ -127,7 +127,7 @@ fun DashboardScreen(
 fun DashboardContent(
     uiState: DashboardUiState,
     snackbarHostState: SnackbarHostState,
-    onMarkBinPutOut: (Long, String) -> Unit,
+    onMarkBinPutOut: (Long, LocalDate, String) -> Unit,
     onNavigateToAddBin: () -> Unit,
     onNavigateToBinDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -296,8 +296,8 @@ fun NextCollectionHeroCard(
     nextDate: LocalDate,
     daysRemaining: Long,
     events: List<CollectionEvent>,
-    putOutBins: Set<Long>,
-    onMarkPutOut: (Long, String) -> Unit,
+    putOutBins: Set<String>,
+    onMarkPutOut: (Long, LocalDate, String) -> Unit,
     onViewBinDetail: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -372,11 +372,11 @@ fun NextCollectionHeroCard(
             // List of bins for this next collection
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 events.forEach { event ->
-                    val isPutOut = putOutBins.contains(event.binId)
+                    val isPutOut = putOutBins.contains("${event.binId}_${event.collectionDate}")
                     HeroBinItemCard(
                         event = event,
                         isPutOut = isPutOut,
-                        onMarkPutOut = { onMarkPutOut(event.binId, event.binName) },
+                        onMarkPutOut = { onMarkPutOut(event.binId, event.collectionDate, event.binName) },
                         onViewBinDetail = { onViewBinDetail(event.binId) }
                     )
                 }
@@ -841,7 +841,7 @@ fun DashboardScreenPreview() {
                 )
             ),
             snackbarHostState = remember { SnackbarHostState() },
-            onMarkBinPutOut = { _, _ -> },
+            onMarkBinPutOut = { _, _, _ -> },
             onNavigateToAddBin = {},
             onNavigateToBinDetail = {},
             onNavigateToSettings = {}

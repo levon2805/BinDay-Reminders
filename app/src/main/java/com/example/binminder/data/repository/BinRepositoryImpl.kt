@@ -238,13 +238,13 @@ class BinRepositoryImpl(
     /**
      * Observes set of put out bin IDs as a flow on [Dispatchers.IO].
      */
-    override val putOutBins: Flow<Set<Long>> =
+    override val putOutBins: Flow<Set<String>> =
         notificationSettingsDataStore.putOutBinIds.flowOn(Dispatchers.IO)
 
     /**
      * Updates set of put out bin IDs on [Dispatchers.IO] and immediately reschedules notification engine.
      */
-    override suspend fun updatePutOutBins(binIds: Set<Long>): Unit = withContext(Dispatchers.IO) {
+    override suspend fun updatePutOutBins(binIds: Set<String>): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setPutOutBinIds(binIds)
         NotificationScheduler.scheduleNotificationWorker(applicationContext)
     }

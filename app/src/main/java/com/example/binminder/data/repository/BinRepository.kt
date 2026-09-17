@@ -78,12 +78,12 @@ interface BinRepository {
     /**
      * Reactive flow of put out bin IDs.
      */
-    val putOutBins: Flow<Set<Long>>
+    val putOutBins: Flow<Set<String>>
 
     /**
      * Updates set of put out bin IDs.
      */
-    suspend fun updatePutOutBins(binIds: Set<Long>)
+    suspend fun updatePutOutBins(binIds: Set<String>)
 
     /**
      * Reactive flow of the active application theme preference.

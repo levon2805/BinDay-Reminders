@@ -66,17 +66,18 @@ class DashboardViewModelTest {
     @Test
     fun testMarkBinPutOutTogglesState() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
+        val date = LocalDate.now()
 
-        viewModel.markBinPutOut(1L, "General Waste")
+        viewModel.markBinPutOut(1L, date, "General Waste")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.putOutBins.contains(1L))
+        assertTrue(viewModel.uiState.value.putOutBins.contains("1_${date}"))
         assertEquals("Marked 'General Waste' bin as put out for collection.", viewModel.uiState.value.userMessage)
 
-        viewModel.markBinPutOut(1L, "General Waste")
+        viewModel.markBinPutOut(1L, date, "General Waste")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.putOutBins.contains(1L))
+        assertFalse(viewModel.uiState.value.putOutBins.contains("1_${date}"))
         assertEquals("Unmarked 'General Waste' bin.", viewModel.uiState.value.userMessage)
     }
 
@@ -110,10 +111,10 @@ class DashboardViewModelTest {
         override val notificationSettings: Flow<NotificationSettings> = flowOf(NotificationSettings())
         override suspend fun updateNotificationSettings(settings: NotificationSettings) {}
 
-        private val putOutBinsFlow = MutableStateFlow<Set<Long>>(emptySet())
-        override val putOutBins: Flow<Set<Long>> = putOutBinsFlow
+        private val putOutBinsFlow = MutableStateFlow<Set<String>>(emptySet())
+        override val putOutBins: Flow<Set<String>> = putOutBinsFlow
 
-        override suspend fun updatePutOutBins(binIds: Set<Long>) {
+        override suspend fun updatePutOutBins(binIds: Set<String>) {
             putOutBinsFlow.value = binIds
         }
         override val themeMode: Flow<AppThemeMode> = flowOf(AppThemeMode.SYSTEM)

@@ -62,7 +62,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                     .filter { it.collectionDate == targetDate }
 
                 if (events.isNotEmpty()) {
-                    val allBinsPutOut = events.all { putOutBins.contains(it.binId) }
+                    val allBinsPutOut = events.all { putOutBins.contains("${it.binId}_${it.collectionDate}") }
                     if (!allBinsPutOut) {
                         val binNames = events.joinToString(separator = " and ") { it.binName }
                         val title = if (isEvening) {
@@ -83,7 +83,10 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                             context = appContext,
                             title = title,
                             message = message,
-                            notificationId = targetDate.hashCode()
+                            notificationId = targetDate.hashCode(),
+                            binIds = events.map { it.binId },
+                            binNames = binNames,
+                            targetDateStr = targetDate.toString()
                         )
                     } else {
                         Log.d(TAG, "All collection bins for $targetDate are marked put out (isPutOut == true). Skipping notification.")

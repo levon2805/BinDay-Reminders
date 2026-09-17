@@ -237,10 +237,10 @@ class SettingsViewModelTest {
             settingsFlow.value = settings
         }
 
-        private val putOutBinsFlow = MutableStateFlow<Set<Long>>(emptySet())
-        override val putOutBins: Flow<Set<Long>> = putOutBinsFlow
+        private val putOutBinsFlow = MutableStateFlow<Set<String>>(emptySet())
+        override val putOutBins: Flow<Set<String>> = putOutBinsFlow
 
-        override suspend fun updatePutOutBins(binIds: Set<Long>) {
+        override suspend fun updatePutOutBins(binIds: Set<String>) {
             putOutBinsFlow.value = binIds
         }
 

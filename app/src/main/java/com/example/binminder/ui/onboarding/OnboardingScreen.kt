@@ -1,5 +1,13 @@
 package com.example.binminder.ui.onboarding
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -111,6 +119,14 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // Proceed with onboarding completion regardless of choice
+        viewModel.completeSetup(onOnboardingComplete)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.resetState()
@@ -136,7 +152,21 @@ fun OnboardingScreen(
         onPreviousStep = { viewModel.previousStep() },
         onGoToStep = { viewModel.goToStep(it) },
         canAdvanceFromCurrentStep = viewModel.canAdvanceFromCurrentStep(),
-        onCompleteSetup = { viewModel.completeSetup(onOnboardingComplete) },
+        onCompleteSetup = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.reminderEnabled) {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    viewModel.completeSetup(onOnboardingComplete)
+                } else {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                viewModel.completeSetup(onOnboardingComplete)
+            }
+        },
         modifier = modifier
     )
 }

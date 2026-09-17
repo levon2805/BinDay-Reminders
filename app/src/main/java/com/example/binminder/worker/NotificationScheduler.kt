@@ -154,13 +154,19 @@ object NotificationScheduler {
 
                     // B. Enqueue High-Priority OneTime WorkManager Fallback
                     if (workManager != null) {
+                        // Cancel any legacy periodic workers to prevent incorrect daily firing
+                        workManager.cancelUniqueWork(WORK_NAME)
+                        workManager.cancelUniqueWork(WORK_NAME_EVENING)
+                        workManager.cancelUniqueWork(WORK_NAME_MORNING)
+
                         try {
                             val workData = workDataOf(
                                 "REMINDER_SLOT" to target.slot.name,
                                 "TARGET_DATE" to target.collectionDate.toString()
                             )
                             val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                                .setInitialDelay(target.delayMillis, TimeUnit.MILLISECONDS)
+                                // Add 2-minute buffer so WorkManager fallback only runs if AlarmManager fails/is killed
+                                .setInitialDelay(target.delayMillis + 120_000L, TimeUnit.MILLISECONDS)
                                 .setInputData(workData)
                                 .build()
 
@@ -172,27 +178,6 @@ object NotificationScheduler {
                             )
                         } catch (e: Exception) {
                             Log.e(TAG, "Error scheduling fallback OneTimeWorkRequest for ${target.slot}", e)
-                        }
-
-                        // C. Enqueue Daily Periodic WorkManager Safety Check
-                        try {
-                            val workData = workDataOf(
-                                "REMINDER_SLOT" to target.slot.name,
-                                "TARGET_DATE" to target.collectionDate.toString()
-                            )
-                            val periodicRequest = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
-                                .setInitialDelay(target.delayMillis, TimeUnit.MILLISECONDS)
-                                .setInputData(workData)
-                                .build()
-
-                            val periodicWorkName = if (target.slot == ReminderSlot.EVENING) WORK_NAME_EVENING else WORK_NAME_MORNING
-                            workManager.enqueueUniquePeriodicWork(
-                                periodicWorkName,
-                                ExistingPeriodicWorkPolicy.UPDATE,
-                                periodicRequest
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error scheduling PeriodicWorkRequest for ${target.slot}", e)
                         }
                     }
                 }
@@ -268,7 +253,10 @@ object NotificationScheduler {
                 context = context.applicationContext,
                 title = "BinDay Test Reminder 🚛",
                 message = "Test reminder successful! Your wheelie bin collection notifications are configured correctly.",
-                notificationId = 9999
+                notificationId = 9999,
+                binIds = listOf(-1L), // Dummy ID so the "Done" button appears in the test
+                binNames = "Test Bin",
+                targetDateStr = LocalDate.now().toString()
             )
         } catch (_: Throwable) {}
     }

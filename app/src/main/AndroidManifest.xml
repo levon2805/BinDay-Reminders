@@ -55,6 +55,11 @@
             android:name=".worker.NotificationAlarmReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <receiver
+            android:name=".worker.MarkBinPutOutReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 
 </manifest>

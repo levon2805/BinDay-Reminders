@@ -57,7 +57,10 @@ object NotificationHelper {
         context: Context,
         title: String,
         message: String,
-        notificationId: Int = 1001
+        notificationId: Int = 1001,
+        binIds: List<Long> = emptyList(),
+        binNames: String = "",
+        targetDateStr: String = ""
     ) {
         createNotificationChannel(context)
 
@@ -71,6 +74,27 @@ object NotificationHelper {
                 return
             }
         }
+
+        // --- Anti-Spam / Debounce Logic ---
+        // Prevents the WorkManager fallback from double-posting if the exact AlarmManager already succeeded.
+        // It relies on a local timestamp record rather than active system notifications,
+        // so it safely catches duplicates even if the user immediately swipes the first one away!
+        val prefs = context.getSharedPreferences("notification_debounce", Context.MODE_PRIVATE)
+        val debounceKey = "${notificationId}_${title}"
+        val lastKey = prefs.getString("last_key", "")
+        val lastTime = prefs.getLong("last_time", 0L)
+        
+        // 9999 is the test notification ID, always allow it through.
+        // 1 hour window (3600000ms) to block the duplicate fallback.
+        if (notificationId != 9999 && lastKey == debounceKey && (System.currentTimeMillis() - lastTime) < 3_600_000L) {
+            return
+        }
+        
+        prefs.edit()
+            .putString("last_key", debounceKey)
+            .putLong("last_time", System.currentTimeMillis())
+            .apply()
+        // ----------------------------------
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -97,8 +121,31 @@ object NotificationHelper {
             .setVibrate(longArrayOf(0, 250, 250, 250))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pendingIntent)
-            .setFullScreenIntent(pendingIntent, true) // Heads-up banner flag
             .setAutoCancel(true)
+
+        // Add "Mark as Put Out" action button if bin data is provided
+        if (binIds.isNotEmpty() && targetDateStr.isNotEmpty()) {
+            val markPutOutIntent = Intent(context, MarkBinPutOutReceiver::class.java).apply {
+                action = "com.example.binminder.ACTION_MARK_PUT_OUT"
+                putExtra("NOTIFICATION_ID", notificationId)
+                putExtra("TARGET_DATE", targetDateStr)
+                putExtra("BIN_IDS", binIds.joinToString(","))
+                putExtra("BIN_NAMES", binNames)
+            }
+            
+            val markPutOutPendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId, // Use notification ID to ensure unique pending intent
+                markPutOutIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            builder.addAction(
+                0, // No icon, keeps it sleek and system-default
+                "Done",
+                markPutOutPendingIntent
+            )
+        }
 
         NotificationManagerCompat.from(context).notify(notificationId, builder.build())
     }

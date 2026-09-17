@@ -95,18 +95,17 @@ class NotificationSettingsDataStore(context: Context) {
     /**
      * Observes the set of bin IDs currently marked as put out for collection.
      */
-    val putOutBinIds: Flow<Set<Long>> = safeData.map { prefs ->
-        val stringSet = prefs[Keys.PUT_OUT_BIN_IDS] ?: emptySet()
-        stringSet.mapNotNull { it.toLongOrNull() }.toSet()
+    val putOutBinIds: Flow<Set<String>> = safeData.map { prefs ->
+        prefs[Keys.PUT_OUT_BIN_IDS] ?: emptySet()
     }
 
     /**
      * Updates the saved put out bin IDs set.
      */
-    suspend fun setPutOutBinIds(binIds: Set<Long>) {
+    suspend fun setPutOutBinIds(binIds: Set<String>) {
         runCatching {
             applicationContext.dataStore.edit { prefs ->
-                prefs[Keys.PUT_OUT_BIN_IDS] = binIds.map { it.toString() }.toSet()
+                prefs[Keys.PUT_OUT_BIN_IDS] = binIds
             }
         }
     }

@@ -28,7 +28,7 @@ data class DashboardUiState(
     val nextCollectionEvents: List<CollectionEvent> = emptyList(),
     val daysRemaining: Long = 0,
     val upcomingEventsGrouped: Map<LocalDate, List<CollectionEvent>> = emptyMap(),
-    val putOutBins: Set<Long> = emptySet(),
+    val putOutBins: Set<String> = emptySet(),
     val allBins: List<Bin> = emptyList(),
     val userMessage: String? = null
 )
@@ -45,7 +45,7 @@ class DashboardViewModel(
     started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
-    private val _putOutBins = MutableStateFlow<Set<Long>>(emptySet())
+    private val _putOutBins = MutableStateFlow<Set<String>>(emptySet())
     private val _userMessage = MutableStateFlow<String?>(null)
 
     init {
@@ -106,9 +106,10 @@ class DashboardViewModel(
     /**
      * Toggles whether a specific bin has been put out on the kerb for collection using [ToggleBinPutOutUseCase].
      */
-    fun markBinPutOut(binId: Long, binName: String, context: Context? = null) {
+    fun markBinPutOut(binId: Long, collectionDate: LocalDate, binName: String, context: Context? = null) {
         val result = toggleBinPutOutUseCase(
             binId = binId,
+            collectionDate = collectionDate,
             binName = binName,
             currentPutOutBins = _putOutBins.value
         )
@@ -119,7 +120,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             repository.updatePutOutBins(result.updatedPutOutBins)
             if (context != null) {
-                if (result.updatedPutOutBins.contains(binId)) {
+                if (result.updatedPutOutBins.contains("${binId}_${collectionDate}")) {
                     // Bin was marked as put out: suppress/cancel system tray notification
                     NotificationScheduler.cancelOrSuppressNotificationForToday(context)
                 }

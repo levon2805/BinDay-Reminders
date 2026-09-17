@@ -80,8 +80,9 @@ class NotificationWorker(
                 .filter { it.collectionDate == targetDate }
 
             if (events.isNotEmpty()) {
+
                 // Check if all upcoming collection bins for targetDate are marked as put out (isPutOut == true)
-                val allBinsPutOut = events.all { putOutBins.contains(it.binId) }
+                val allBinsPutOut = events.all { putOutBins.contains("${it.binId}_${it.collectionDate}") }
                 if (allBinsPutOut) {
                     Log.d(TAG, "Upcoming collection bins for $targetDate are marked put out (isPutOut == true). Skipping notification.")
                     continue
@@ -106,10 +107,17 @@ class NotificationWorker(
                     context = appContext,
                     title = title,
                     message = message,
-                    notificationId = targetDate.hashCode()
+                    notificationId = targetDate.hashCode(),
+                    binIds = events.map { it.binId },
+                    binNames = binNames,
+                    targetDateStr = targetDate.toString()
                 )
             }
         }
+
+        // Reschedule the notification engine in case the OS killed the exact alarm 
+        // and this fallback is keeping the schedule alive.
+        NotificationScheduler.scheduleNotificationWorker(appContext)
 
         return Result.success()
     }

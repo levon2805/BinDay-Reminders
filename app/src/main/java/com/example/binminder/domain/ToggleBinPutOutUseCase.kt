@@ -1,10 +1,12 @@
 package com.example.binminder.domain
 
+import java.time.LocalDate
+
 /**
  * Result data class holding updated kerbside bin state and user notification message.
  */
 data class ToggleBinPutOutResult(
-    val updatedPutOutBins: Set<Long>,
+    val updatedPutOutBins: Set<String>,
     val userMessage: String
 )
 
@@ -15,19 +17,21 @@ data class ToggleBinPutOutResult(
  */
 class ToggleBinPutOutUseCase {
     /**
-     * Toggles the put-out state of [binId] in [currentPutOutBins] and returns the updated set with user feedback.
+     * Toggles the put-out state of [binId] for [collectionDate] in [currentPutOutBins] and returns the updated set with user feedback.
      */
     operator fun invoke(
         binId: Long,
+        collectionDate: LocalDate,
         binName: String,
-        currentPutOutBins: Set<Long>
+        currentPutOutBins: Set<String>
     ): ToggleBinPutOutResult {
         val newSet = currentPutOutBins.toMutableSet()
-        val isNowPutOut = if (newSet.contains(binId)) {
-            newSet.remove(binId)
+        val key = "${binId}_${collectionDate}"
+        val isNowPutOut = if (newSet.contains(key)) {
+            newSet.remove(key)
             false
         } else {
-            newSet.add(binId)
+            newSet.add(key)
             true
         }
 
