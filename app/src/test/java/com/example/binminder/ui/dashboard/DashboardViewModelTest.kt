@@ -71,13 +71,13 @@ class DashboardViewModelTest {
         viewModel.markBinPutOut(1L, date, "General Waste")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.putOutBins.contains("1_${date}"))
+        assertTrue(viewModel.uiState.value.putOutBins.contains("1_$date"))
         assertEquals("Marked 'General Waste' bin as put out for collection.", viewModel.uiState.value.userMessage)
 
         viewModel.markBinPutOut(1L, date, "General Waste")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.putOutBins.contains("1_${date}"))
+        assertFalse(viewModel.uiState.value.putOutBins.contains("1_$date"))
         assertEquals("Unmarked 'General Waste' bin.", viewModel.uiState.value.userMessage)
     }
 

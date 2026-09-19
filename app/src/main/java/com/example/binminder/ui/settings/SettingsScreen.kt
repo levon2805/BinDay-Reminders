@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -162,10 +160,10 @@ fun SettingsScreen(
         onToggleReminders = { enabled ->
             if (enabled) {
                 runWithNotificationPermission {
-                    viewModel.toggleReminders(true, context)
+                    viewModel.toggleReminders(true)
                 }
             } else {
-                viewModel.toggleReminders(false, context)
+                viewModel.toggleReminders(false)
             }
         },
         onUpdateEveningTime = { time -> viewModel.updateEveningReminderTime(time) },
@@ -395,7 +393,7 @@ fun SettingsContent(
                                 LocalTime.of(21, 0)
                             )
                             val customEveningLabel = if (isEveningCustom) {
-                                "Custom (${settings.eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "Custom (${settings.eveningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
                                 "Custom..."
                             }
@@ -484,7 +482,7 @@ fun SettingsContent(
                                 LocalTime.of(8, 0)
                             )
                             val customMorningLabel = if (isMorningCustom) {
-                                "Custom (${settings.morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                                "Custom (${settings.morningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
                             } else {
                                 "Custom..."
                             }

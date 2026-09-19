@@ -116,6 +116,16 @@ class BinListViewModel(
     }
 
     /**
+     * Clears all stored bins from the application.
+     */
+    fun removeAllBins() {
+        viewModelScope.launch {
+            repository.clearAllBins()
+            _userMessage.value = "All wheelie bins removed."
+        }
+    }
+
+    /**
      * Clears current user message notification string.
      */
     fun dismissUserMessage() {

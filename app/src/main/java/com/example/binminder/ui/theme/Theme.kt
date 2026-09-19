@@ -19,6 +19,10 @@ import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.AppThemeMode
 
 import androidx.compose.ui.composed
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import android.app.Activity
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = BrandVibrantLeaf,
@@ -79,7 +83,7 @@ val NeoShadowDark = Color(0x88000000)  // Crisp deep black drop shadow for Dark 
 
 /**
  * Custom Modifier for Subtle Neo-Brutalist Shadows with high contrast in Light & Dark mode.
- * Light mode shadow color is explicitly dark slate/black and never resolves to green or container color.
+ * Light mode shadow colour is explicitly dark slate/black and never resolves to green or container colour.
  */
 fun Modifier.neoShadow(
     color: Color = Color.Unspecified,
@@ -125,6 +129,14 @@ fun BinMinderTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
 
     MaterialTheme(

@@ -105,7 +105,7 @@ class SettingsViewModel(
     /**
      * Enables or disables collection reminder notifications.
      */
-    fun toggleReminders(enabled: Boolean, context: Context) {
+    fun toggleReminders(enabled: Boolean) {
         viewModelScope.launch {
             val currentSettings = repository.notificationSettings.first()
             val updated = currentSettings.copy(reminderEnabled = enabled)

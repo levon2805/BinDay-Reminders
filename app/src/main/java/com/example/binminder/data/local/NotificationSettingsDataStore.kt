@@ -133,13 +133,6 @@ class NotificationSettingsDataStore(context: Context) {
     }
 
     /**
-     * Observes the primary weekly collection day preference.
-     */
-    val primaryCollectionDay: Flow<String> = safeData.map { prefs ->
-        prefs[Keys.PRIMARY_COLLECTION_DAY] ?: "MONDAY"
-    }
-
-    /**
      * Updates the saved theme preference option.
      */
     suspend fun setThemeMode(themeMode: AppThemeMode) {

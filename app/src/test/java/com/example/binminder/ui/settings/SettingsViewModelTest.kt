@@ -83,7 +83,7 @@ class SettingsViewModelTest {
 
     @Test
     fun testToggleReminders() = runTest {
-        viewModel.toggleReminders(false, mockContext())
+        viewModel.toggleReminders(false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(fakeRepository.notificationSettingsState.reminderEnabled)

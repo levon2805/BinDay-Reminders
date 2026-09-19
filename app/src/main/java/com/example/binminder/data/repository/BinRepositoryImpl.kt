@@ -297,7 +297,6 @@ class BinRepositoryImpl(
         binDao.deleteAllBins()
 
         val today = LocalDate.now()
-        val firstPrimaryDay = today.with(TemporalAdjusters.nextOrSame(primaryDay))
 
         val newBins = binSetups.filter { it.isEnabled }.map { setup ->
             val binDay = setup.collectionDay ?: primaryDay

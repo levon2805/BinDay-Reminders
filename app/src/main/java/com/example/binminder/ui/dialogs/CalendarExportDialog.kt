@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,8 +51,6 @@ import com.example.binminder.util.CalendarExportUtils
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-private fun Modifier.maxHeightIn(max: Dp): Modifier = this.heightIn(max = max)
 
 /**
  * Material 3 AlertDialog enabling users to export individual recurring bin schedules to their calendar app,
@@ -113,7 +110,7 @@ fun CalendarExportDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .maxHeightIn(max = 480.dp),
+                            .weight(1f, fill = false),
                     ) {
                         items(activeBins, key = { it.id }) { bin ->
                             val nextDate = CalendarExportUtils.calculateNextCollectionDate(bin)

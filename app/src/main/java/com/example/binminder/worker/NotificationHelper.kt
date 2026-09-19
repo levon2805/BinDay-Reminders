@@ -80,7 +80,7 @@ object NotificationHelper {
         // It relies on a local timestamp record rather than active system notifications,
         // so it safely catches duplicates even if the user immediately swipes the first one away!
         val prefs = context.getSharedPreferences("notification_debounce", Context.MODE_PRIVATE)
-        val debounceKey = "${notificationId}_${title}"
+        val debounceKey = "${notificationId}_$title"
         val lastKey = prefs.getString("last_key", "")
         val lastTime = prefs.getLong("last_time", 0L)
         

@@ -68,7 +68,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -150,7 +149,7 @@ fun OnboardingScreen(
         onReminderEnabledChange = { viewModel.setReminderEnabled(it) },
         onNextStep = { viewModel.nextStep() },
         onPreviousStep = { viewModel.previousStep() },
-        onGoToStep = { viewModel.goToStep(it) },
+
         canAdvanceFromCurrentStep = viewModel.canAdvanceFromCurrentStep(),
         onCompleteSetup = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.reminderEnabled) {
@@ -194,7 +193,7 @@ fun OnboardingContent(
     onReminderEnabledChange: (Boolean) -> Unit,
     onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
-    onGoToStep: (Int) -> Unit,
+
     canAdvanceFromCurrentStep: Boolean,
     onCompleteSetup: () -> Unit,
     modifier: Modifier = Modifier
@@ -584,6 +583,7 @@ fun Step1CouncilContent(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier.fillMaxWidth().height(48.dp).neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
                     ) {
+                        @Suppress("DEPRECATION")
                         Icon(
                             imageVector = Icons.Rounded.OpenInNew,
                             contentDescription = null,
@@ -764,7 +764,7 @@ fun Step2CollectionDayContent(
 }
 
 /**
- * Step 3 composable for selecting bins, editing names, choosing body/lid colors,
+ * Step 3 composable for selecting bins, editing names, choosing body/lid colours,
  * and 1-tap week cycle selectors ("Which bin goes out THIS coming week?").
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -1502,7 +1502,7 @@ fun Step4RemindersContent(
                                     .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = if (isEveningCustom) "Custom (${eveningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
+                                    text = if (isEveningCustom) "Custom (${eveningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -1675,7 +1675,6 @@ fun OnboardingScreenPreview() {
             onReminderEnabledChange = {},
             onNextStep = {},
             onPreviousStep = {},
-            onGoToStep = {},
             canAdvanceFromCurrentStep = true,
             onCompleteSetup = {}
         )

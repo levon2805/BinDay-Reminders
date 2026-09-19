@@ -1,6 +1,5 @@
 package com.example.binminder.util
 
-import android.provider.CalendarContract
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CollectionEvent
