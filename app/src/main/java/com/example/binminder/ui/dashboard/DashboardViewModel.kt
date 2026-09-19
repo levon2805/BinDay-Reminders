@@ -79,12 +79,27 @@ class DashboardViewModel(
             )
         } else {
             val grouped = validEvents.groupBy { it.collectionDate }
-            val earliestDate = grouped.keys.minOrNull()
+            val dates = grouped.keys.sorted()
+            val earliestDate = dates.firstOrNull()
 
-            val nextEvents = if (earliestDate != null) grouped[earliestDate].orEmpty() else emptyList()
+            val nextEvents = mutableListOf<CollectionEvent>()
+            var lastHeroDate = earliestDate
+
+            if (earliestDate != null) {
+                nextEvents.addAll(grouped[earliestDate].orEmpty())
+                
+                if (dates.size > 1) {
+                    val secondDate = dates[1]
+                    if (ChronoUnit.DAYS.between(earliestDate, secondDate) == 1L) {
+                        nextEvents.addAll(grouped[secondDate].orEmpty())
+                        lastHeroDate = secondDate
+                    }
+                }
+            }
+
             val days = if (earliestDate != null) ChronoUnit.DAYS.between(today, earliestDate) else 0L
 
-            val remainingGrouped = grouped.filterKeys { it != earliestDate }
+            val remainingGrouped = grouped.filterKeys { it != earliestDate && it != lastHeroDate }
 
             DashboardUiState(
                 isLoading = false,

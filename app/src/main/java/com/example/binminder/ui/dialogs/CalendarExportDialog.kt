@@ -53,8 +53,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private fun Modifier.maxHeightIn(max: Dp): Modifier = this.heightIn(max = max)
-
 /**
  * Material 3 AlertDialog enabling users to export individual recurring bin schedules to their calendar app,
  * standard .ics file export, or a step-by-step guided queue export mode.
@@ -113,7 +111,7 @@ fun CalendarExportDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .maxHeightIn(max = 480.dp),
+                            .weight(1f, fill = false),
                     ) {
                         items(activeBins, key = { it.id }) { bin ->
                             val nextDate = CalendarExportUtils.calculateNextCollectionDate(bin)

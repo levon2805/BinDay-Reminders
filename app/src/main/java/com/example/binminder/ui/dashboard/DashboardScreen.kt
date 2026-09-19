@@ -83,6 +83,7 @@ import com.example.binminder.ui.theme.formatRelativeDays
 import com.example.binminder.ui.theme.neoShadow
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /**
@@ -215,8 +216,6 @@ fun DashboardContent(
                 ) {
                     item {
                         NextCollectionHeroCard(
-                            nextDate = uiState.nextCollectionDate ?: LocalDate.now(),
-                            daysRemaining = uiState.daysRemaining,
                             events = uiState.nextCollectionEvents,
                             putOutBins = uiState.putOutBins,
                             onMarkPutOut = onMarkBinPutOut,
@@ -274,6 +273,8 @@ fun DashboardContent(
                             UpcomingDateSection(
                                 date = date,
                                 events = eventsOnDate,
+                                putOutBins = uiState.putOutBins,
+                                onMarkPutOut = onMarkBinPutOut,
                                 onViewBinDetail = onNavigateToBinDetail
                             )
                         }
@@ -293,8 +294,6 @@ fun DashboardContent(
  */
 @Composable
 fun NextCollectionHeroCard(
-    nextDate: LocalDate,
-    daysRemaining: Long,
     events: List<CollectionEvent>,
     putOutBins: Set<String>,
     onMarkPutOut: (Long, LocalDate, String) -> Unit,
@@ -305,6 +304,9 @@ fun NextCollectionHeroCard(
     val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
 
     val hasBankHolidayShift = events.any { it.isBankHolidayAdjusted }
+
+    val nextDate = events.minOfOrNull { it.collectionDate } ?: LocalDate.now()
+    val daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), nextDate)
 
     // Display "Today" or "Tomorrow" if applicable
     val dayHeadline = when (daysRemaining) {
@@ -371,14 +373,28 @@ fun NextCollectionHeroCard(
 
             // List of bins for this next collection
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                events.forEach { event ->
-                    val isPutOut = putOutBins.contains("${event.binId}_${event.collectionDate}")
-                    HeroBinItemCard(
-                        event = event,
-                        isPutOut = isPutOut,
-                        onMarkPutOut = { onMarkPutOut(event.binId, event.collectionDate, event.binName) },
-                        onViewBinDetail = { onViewBinDetail(event.binId) }
+                val groupedEvents = events.groupBy { it.collectionDate }
+                groupedEvents.forEach { (date, eventsOnDate) ->
+                    val isToday = date == LocalDate.now()
+                    val isTomorrow = date == LocalDate.now().plusDays(1)
+                    val dateLabel = if (isToday) "Today" else if (isTomorrow) "Tomorrow" else formatBritishDate(date)
+                    
+                    Text(
+                        text = dateLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = onContainerColor
                     )
+                    
+                    eventsOnDate.forEach { event ->
+                        val isPutOut = putOutBins.contains("${event.binId}_${event.collectionDate}")
+                        HeroBinItemCard(
+                            event = event,
+                            isPutOut = isPutOut,
+                            onMarkPutOut = { onMarkPutOut(event.binId, event.collectionDate, event.binName) },
+                            onViewBinDetail = { onViewBinDetail(event.binId) }
+                        )
+                    }
                 }
             }
         }
@@ -582,6 +598,8 @@ fun HeroBinItemCard(
 fun UpcomingDateSection(
     date: LocalDate,
     events: List<CollectionEvent>,
+    putOutBins: Set<String>,
+    onMarkPutOut: (Long, LocalDate, String) -> Unit,
     onViewBinDetail: (Long) -> Unit
 ) {
     Column(
@@ -622,8 +640,11 @@ fun UpcomingDateSection(
 
         // Cards for events on this date
         events.forEach { event ->
+            val isPutOut = putOutBins.contains("${event.binId}_${event.collectionDate}")
             UpcomingEventCard(
                 event = event,
+                isPutOut = isPutOut,
+                onMarkPutOut = { onMarkPutOut(event.binId, event.collectionDate, event.binName) },
                 onClick = { onViewBinDetail(event.binId) }
             )
         }
@@ -636,6 +657,8 @@ fun UpcomingDateSection(
 @Composable
 fun UpcomingEventCard(
     event: CollectionEvent,
+    isPutOut: Boolean,
+    onMarkPutOut: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -675,7 +698,7 @@ fun UpcomingEventCard(
 
             Column(
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .weight(1f)
                     .padding(end = 8.dp)
             ) {
                 Text(
@@ -713,6 +736,26 @@ fun UpcomingEventCard(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            val buttonColor = if (isPutOut) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant
+            val iconColor = if (isPutOut) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
+            
+            IconButton(
+                onClick = onMarkPutOut,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(buttonColor, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = if (isPutOut) "Mark as not put out" else "Mark as put out",
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

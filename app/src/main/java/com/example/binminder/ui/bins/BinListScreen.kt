@@ -114,7 +114,7 @@ fun BinListScreen(
         onRequestDeleteBin = { viewModel.requestDeleteBin(it) },
         onCancelDeleteBin = { viewModel.cancelDeleteBin() },
         onConfirmDeleteBin = { viewModel.confirmDeleteBin() },
-        onResetDefaultBins = { viewModel.resetDefaultBins() },
+        onRunSetupWizard = { viewModel.resetTimetableAndAddress(context) },
         onResetClick = { showResetDialog = true },
         onShowBankHolidayInfo = { showBankHolidayInfoDialog = true },
         onNavigateToAddBin = onNavigateToAddBin,
@@ -131,14 +131,14 @@ fun BinListScreen(
             textContentColor = MaterialTheme.colorScheme.onSurface,
             title = {
                 Text(
-                    text = "Reset Bins?",
+                    text = "Run Setup Wizard?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "This will completely reset your bins and send you back to the start! Are you absolutely sure?",
+                    text = "This will completely reset your configuration. Are you absolutely sure?",
                     style = MaterialTheme.typography.bodyLarge
                 )
             },
@@ -152,7 +152,7 @@ fun BinListScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Reset Bins", fontWeight = FontWeight.SemiBold)
+                    Text("Run Setup Wizard", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -223,7 +223,7 @@ fun BinListContent(
     onRequestDeleteBin: (Bin) -> Unit,
     onCancelDeleteBin: () -> Unit,
     onConfirmDeleteBin: () -> Unit,
-    onResetDefaultBins: () -> Unit,
+    onRunSetupWizard: () -> Unit,
     onResetClick: () -> Unit,
     onShowBankHolidayInfo: () -> Unit,
     onNavigateToAddBin: () -> Unit,
@@ -271,7 +271,7 @@ fun BinListContent(
                             .neoShadow(offset = 4.dp)
                     ) {
                         Text(
-                            text = "Reset",
+                            text = "Run Setup Wizard",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -283,17 +283,19 @@ fun BinListContent(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onNavigateToAddBin,
-                icon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp)) },
-                text = { Text("New Bin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                    .neoShadow(offset = 6.dp)
-            )
+            if (uiState.bins.size < 50) {
+                ExtendedFloatingActionButton(
+                    onClick = onNavigateToAddBin,
+                    icon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp)) },
+                    text = { Text("New Bin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .neoShadow(offset = 6.dp)
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
@@ -309,8 +311,7 @@ fun BinListContent(
                 )
             } else if (uiState.bins.isEmpty()) {
                 EmptyBinsView(
-                    onAddBinClicked = onNavigateToAddBin,
-                    onResetDefaultsClicked = onResetDefaultBins,
+                    onRunSetupWizardClicked = onRunSetupWizard,
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
@@ -614,8 +615,7 @@ fun WheelieBinCard(
  */
 @Composable
 fun EmptyBinsView(
-    onAddBinClicked: () -> Unit,
-    onResetDefaultsClicked: () -> Unit,
+    onRunSetupWizardClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -652,7 +652,7 @@ fun EmptyBinsView(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Add a custom bin or load the standard UK defaults to get started.",
+            text = "Run the setup wizard to get started.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -666,7 +666,7 @@ fun EmptyBinsView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Button(
-                onClick = onAddBinClicked,
+                onClick = onRunSetupWizardClicked,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -678,27 +678,9 @@ fun EmptyBinsView(
                     .height(56.dp)
                     .neoShadow(offset = 6.dp)
             ) {
-                Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Add Custom Bin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-
-            Button(
-                onClick = onResetDefaultsClicked,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .neoShadow(offset = 4.dp)
-            ) {
                 Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Load Defaults", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(text = "Run Setup Wizard", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -747,7 +729,7 @@ fun BinListScreenPreview() {
             onRequestDeleteBin = {},
             onCancelDeleteBin = {},
             onConfirmDeleteBin = {},
-            onResetDefaultBins = {},
+            onRunSetupWizard = {},
             onResetClick = {},
             onShowBankHolidayInfo = {},
             onNavigateToAddBin = {},
