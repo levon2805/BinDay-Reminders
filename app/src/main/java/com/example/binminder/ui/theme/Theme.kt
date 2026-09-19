@@ -83,7 +83,7 @@ val NeoShadowDark = Color(0x88000000)  // Crisp deep black drop shadow for Dark 
 
 /**
  * Custom Modifier for Subtle Neo-Brutalist Shadows with high contrast in Light & Dark mode.
- * Light mode shadow color is explicitly dark slate/black and never resolves to green or container color.
+ * Light mode shadow colour is explicitly dark slate/black and never resolves to green or container colour.
  */
 fun Modifier.neoShadow(
     color: Color = Color.Unspecified,

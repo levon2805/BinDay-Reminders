@@ -107,13 +107,13 @@ class AddEditBinViewModelTest {
         viewModel.loadBin(null)
         viewModel.onNameChange("Custom Bin")
 
-        // Color picker applies custom body hex matching BLUE
+        // Colour picker applies custom body hex matching BLUE
         viewModel.onCustomHexChange("#1E88E5")
         assertEquals("#1E88E5", viewModel.uiState.value.colorHex)
         assertEquals(BinColor.BLUE, viewModel.uiState.value.presetColor)
         assertEquals("Standard blue wheelie bin for custom bin", viewModel.uiState.value.customNote)
 
-        // Color picker applies custom lid hex matching RED
+        // Colour picker applies custom lid hex matching RED
         viewModel.onCustomLidHexChange("#D32F2F")
         assertEquals("#D32F2F", viewModel.uiState.value.lidColorHex)
         assertEquals(BinColor.RED, viewModel.uiState.value.lidPresetColor)

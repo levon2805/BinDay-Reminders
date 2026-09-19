@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.example.binminder.data.model.BinColor
 
 /**
- * Data representation of a curated color swatch item.
+ * Data representation of a curated colour swatch item.
  */
 data class ColorSwatchItem(
     val name: String,
@@ -61,7 +61,7 @@ data class ColorSwatchItem(
 )
 
 /**
- * Pre-curated color swatch categories covering Reds, Pinks, Purples, Indigos, Blues, Cyans,
+ * Pre-curated colour swatch categories covering Reds, Pinks, Purples, Indigos, Blues, Cyans,
  * Teals, Greens, Limes, Yellows, Ambers, Oranges, Browns, Greys, and Blacks.
  */
 val CuratedColorCategories: List<Pair<String, List<ColorSwatchItem>>> = listOf(
@@ -106,7 +106,7 @@ val CuratedColorCategories: List<Pair<String, List<ColorSwatchItem>>> = listOf(
 
 /**
  * Visual Colour Picker Dialog providing both a curated swatch grid and an interactive
- * Hue & Brightness slider/wheel for custom color selection, with live wheelie bin icon preview.
+ * Hue & Brightness slider/wheel for custom colour selection, with live wheelie bin icon preview.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -121,7 +121,7 @@ fun ColorPickerDialog(
     var selectedPreset by remember { mutableStateOf(initialPresetColor ?: findMatchingBinColor(selectedColorHex)) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    // HSV state for custom color sliders
+    // HSV state for custom colour sliders
     val initialColor = parseBinColor(selectedColorHex, selectedPreset)
     val initialHsv = remember(initialColorHex) {
         val hsv = FloatArray(3)

@@ -74,7 +74,7 @@ fun findMatchingBinColor(colorHex: String?): BinColor {
 }
 
 /**
- * Generates an accurate, color-aware default note string for a bin based on its name and colours.
+ * Generates an accurate, colour-aware default note string for a bin based on its name and colours.
  */
 fun getDefaultNotes(
     binName: String,

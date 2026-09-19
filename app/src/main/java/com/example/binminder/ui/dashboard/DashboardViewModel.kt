@@ -135,7 +135,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             repository.updatePutOutBins(result.updatedPutOutBins)
             if (context != null) {
-                if (result.updatedPutOutBins.contains("${binId}_${collectionDate}")) {
+                if (result.updatedPutOutBins.contains("${binId}_$collectionDate")) {
                     // Bin was marked as put out: suppress/cancel system tray notification
                     NotificationScheduler.cancelOrSuppressNotificationForToday(context)
                 }

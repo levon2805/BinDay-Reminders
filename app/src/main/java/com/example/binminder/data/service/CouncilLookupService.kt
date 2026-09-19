@@ -86,7 +86,7 @@ class CouncilLookupServiceImpl(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager

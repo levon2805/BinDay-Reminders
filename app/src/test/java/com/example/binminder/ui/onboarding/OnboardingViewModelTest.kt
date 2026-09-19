@@ -228,8 +228,8 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun testDynamicNotesSync_OnBodyAndLidColorChange() {
-        // Change body color to BLACK and lid color to BLUE for Dry Mixed Recycling
+    fun testDynamicNotesSync_OnBodyAndLidColourChange() {
+        // Change body colour to BLACK and lid colour to BLUE for Dry Mixed Recycling
         viewModel.setBinColor("Dry Mixed Recycling", BinColor.BLACK)
         viewModel.setBinLidColor("Dry Mixed Recycling", BinColor.BLUE)
 

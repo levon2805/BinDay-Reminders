@@ -55,7 +55,7 @@ class CouncilLookupRepositoryImpl(
 
     private fun resolveCouncilResult(dto: PostcodeLookupDto): CouncilScheduleResult {
         val admin = dto.adminDistrict.trim()
-        val councilName = formatCouncilName(admin, "Council")
+        val councilName = formatCouncilName(admin)
         val searchUrl = buildCouncilSearchUrl(councilName)
 
         return CouncilScheduleResult(
@@ -75,7 +75,7 @@ class CouncilLookupRepositoryImpl(
         return "https://www.google.com/search?q=$encodedQuery"
     }
 
-    private fun formatCouncilName(admin: String, defaultSuffix: String): String {
+    private fun formatCouncilName(admin: String): String {
         val trimmed = admin.trim()
         val lower = trimmed.lowercase()
 
@@ -84,7 +84,7 @@ class CouncilLookupRepositoryImpl(
             lower.contains("borough") -> if (lower.contains("council")) trimmed else "$trimmed Council"
             lower.contains("district") -> if (lower.contains("council")) trimmed else "$trimmed Council"
             lower.contains("city") -> if (lower.contains("council")) trimmed else "$trimmed Council"
-            else -> "$trimmed $defaultSuffix"
+            else -> "$trimmed Council"
         }
     }
 }
