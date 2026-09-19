@@ -42,6 +42,8 @@ class NotificationSettingsDataStore(context: Context) {
         val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
         val EVENING_REMINDER_TIME = stringPreferencesKey("evening_reminder_time")
         val MORNING_REMINDER_TIME = stringPreferencesKey("morning_reminder_time")
+        val EVENING_REMINDER_TIMES = stringSetPreferencesKey("evening_reminder_times")
+        val MORNING_REMINDER_TIMES = stringSetPreferencesKey("morning_reminder_times")
         val PUT_OUT_BIN_IDS = stringSetPreferencesKey("put_out_bin_ids")
         val REMINDER_HOUR = intPreferencesKey("reminder_hour")
         val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
@@ -53,7 +55,7 @@ class NotificationSettingsDataStore(context: Context) {
     }
 
     /**
-     * Observes current notification settings including reminder time and theme mode.
+     * Observes current notification settings including reminder times and theme mode.
      */
     val notificationSettings: Flow<NotificationSettings> = safeData.map { prefs ->
         val enabled = prefs[Keys.REMINDER_ENABLED] ?: true
@@ -61,33 +63,55 @@ class NotificationSettingsDataStore(context: Context) {
         val mode = themeModeRaw?.let { runCatching { AppThemeMode.valueOf(it) }.getOrNull() } ?: AppThemeMode.SYSTEM
 
         val eveningStr = prefs[Keys.EVENING_REMINDER_TIME]
-        val eveningTime = if (eveningStr != null) {
-            if (eveningStr == "NONE") null else runCatching { LocalTime.parse(eveningStr) }.getOrNull()
+        val primaryEveningTime: LocalTime? = when {
+            eveningStr == "NONE" -> null
+            eveningStr != null -> runCatching { LocalTime.parse(eveningStr) }.getOrNull()
+            else -> {
+                val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: true
+                if (legacyEvening) {
+                    val hour = prefs[Keys.REMINDER_HOUR] ?: 19
+                    val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                    LocalTime.of(hour, minute)
+                } else null
+            }
+        }
+
+        val eveningSet = prefs[Keys.EVENING_REMINDER_TIMES]
+        val eveningReminderTimes: Set<LocalTime> = if (eveningSet != null) {
+            val times = eveningSet.mapNotNull { runCatching { LocalTime.parse(it) }.getOrNull() }.toSet()
+            if (primaryEveningTime != null) times + primaryEveningTime else times
         } else {
-            val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: true
-            if (legacyEvening) {
-                val hour = prefs[Keys.REMINDER_HOUR] ?: 19
-                val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
-                LocalTime.of(hour, minute)
-            } else null
+            if (primaryEveningTime != null) setOf(primaryEveningTime) else emptySet()
         }
 
         val morningStr = prefs[Keys.MORNING_REMINDER_TIME]
-        val morningTime = if (morningStr != null) {
-            if (morningStr == "NONE") null else runCatching { LocalTime.parse(morningStr) }.getOrNull()
+        val primaryMorningTime: LocalTime? = when {
+            morningStr == "NONE" -> null
+            morningStr != null -> runCatching { LocalTime.parse(morningStr) }.getOrNull()
+            else -> {
+                val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: false
+                if (!legacyEvening) {
+                    val hour = prefs[Keys.REMINDER_HOUR] ?: 7
+                    val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                    LocalTime.of(hour, minute)
+                } else null
+            }
+        }
+
+        val morningSet = prefs[Keys.MORNING_REMINDER_TIMES]
+        val morningReminderTimes: Set<LocalTime> = if (morningSet != null) {
+            val times = morningSet.mapNotNull { runCatching { LocalTime.parse(it) }.getOrNull() }.toSet()
+            if (primaryMorningTime != null) times + primaryMorningTime else times
         } else {
-            val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: false
-            if (!legacyEvening) {
-                val hour = prefs[Keys.REMINDER_HOUR] ?: 7
-                val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
-                LocalTime.of(hour, minute)
-            } else null
+            if (primaryMorningTime != null) setOf(primaryMorningTime) else emptySet()
         }
 
         NotificationSettings(
             reminderEnabled = enabled,
-            eveningReminderTime = eveningTime,
-            morningReminderTime = morningTime,
+            primaryEveningTime = primaryEveningTime,
+            primaryMorningTime = primaryMorningTime,
+            eveningReminderTimes = eveningReminderTimes,
+            morningReminderTimes = morningReminderTimes,
             themeMode = mode
         )
     }
@@ -173,8 +197,10 @@ class NotificationSettingsDataStore(context: Context) {
         runCatching {
             applicationContext.dataStore.edit { prefs ->
                 prefs[Keys.REMINDER_ENABLED] = settings.reminderEnabled
-                prefs[Keys.EVENING_REMINDER_TIME] = settings.eveningReminderTime?.toString() ?: "NONE"
-                prefs[Keys.MORNING_REMINDER_TIME] = settings.morningReminderTime?.toString() ?: "NONE"
+                prefs[Keys.EVENING_REMINDER_TIMES] = settings.eveningReminderTimes.map { it.toString() }.toSet()
+                prefs[Keys.MORNING_REMINDER_TIMES] = settings.morningReminderTimes.map { it.toString() }.toSet()
+                prefs[Keys.EVENING_REMINDER_TIME] = settings.primaryEveningTime?.toString() ?: "NONE"
+                prefs[Keys.MORNING_REMINDER_TIME] = settings.primaryMorningTime?.toString() ?: "NONE"
                 prefs[Keys.THEME_MODE] = settings.themeMode.name
             }
         }

@@ -116,12 +116,24 @@ class SettingsViewModel(
     }
 
     /**
-     * Updates evening reminder time (or null if disabled / NONE).
+     * Updates evening reminder time (or clears all if null).
      */
     fun updateEveningReminderTime(time: LocalTime?) {
         viewModelScope.launch {
             val currentSettings = repository.notificationSettings.first()
-            val updated = currentSettings.copy(eveningReminderTime = time)
+            val oldPrimary = currentSettings.primaryEveningTime
+            val extraTimes = if (oldPrimary != null) currentSettings.eveningReminderTimes - oldPrimary else currentSettings.eveningReminderTimes
+            val updated = if (time == null) {
+                currentSettings.copy(
+                    primaryEveningTime = null,
+                    eveningReminderTimes = extraTimes
+                )
+            } else {
+                currentSettings.copy(
+                    primaryEveningTime = time,
+                    eveningReminderTimes = extraTimes + time
+                )
+            }
             repository.updateNotificationSettings(updated)
             val message = if (time != null) {
                 "Evening reminder set to ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
@@ -133,12 +145,24 @@ class SettingsViewModel(
     }
 
     /**
-     * Updates morning reminder time (or null if disabled / NONE).
+     * Updates morning reminder time (or clears all if null).
      */
     fun updateMorningReminderTime(time: LocalTime?) {
         viewModelScope.launch {
             val currentSettings = repository.notificationSettings.first()
-            val updated = currentSettings.copy(morningReminderTime = time)
+            val oldPrimary = currentSettings.primaryMorningTime
+            val extraTimes = if (oldPrimary != null) currentSettings.morningReminderTimes - oldPrimary else currentSettings.morningReminderTimes
+            val updated = if (time == null) {
+                currentSettings.copy(
+                    primaryMorningTime = null,
+                    morningReminderTimes = extraTimes
+                )
+            } else {
+                currentSettings.copy(
+                    primaryMorningTime = time,
+                    morningReminderTimes = extraTimes + time
+                )
+            }
             repository.updateNotificationSettings(updated)
             val message = if (time != null) {
                 "Morning reminder set to ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
@@ -146,6 +170,135 @@ class SettingsViewModel(
                 "Morning reminder disabled."
             }
             _userMessage.value = message
+        }
+    }
+
+    /**
+     * Adds an extra reminder time for evening before (if hour >= 12) or morning of (if hour < 12).
+     */
+    fun addExtraReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updated = if (time.hour >= 12) {
+                currentSettings.copy(eveningReminderTimes = currentSettings.eveningReminderTimes + time)
+            } else {
+                currentSettings.copy(morningReminderTimes = currentSettings.morningReminderTimes + time)
+            }
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Extra reminder added for ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+        }
+    }
+
+    /**
+     * Adds a reminder time for the day before collection.
+     */
+    fun addEveningReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(eveningReminderTimes = currentSettings.eveningReminderTimes + time)
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Before reminder added for ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+        }
+    }
+
+    /**
+     * Adds a reminder time for the day of collection.
+     */
+    fun addMorningReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updated = currentSettings.copy(morningReminderTimes = currentSettings.morningReminderTimes + time)
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Of reminder added for ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+        }
+    }
+
+    /**
+     * Edits an existing day before reminder time in-place.
+     */
+    fun editEveningReminderTime(oldTime: LocalTime, newTime: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updatedTimes = (currentSettings.eveningReminderTimes - oldTime) + newTime
+            val newPrimary = if (currentSettings.primaryEveningTime == oldTime) newTime else currentSettings.primaryEveningTime
+            val updated = currentSettings.copy(
+                primaryEveningTime = newPrimary,
+                eveningReminderTimes = updatedTimes
+            )
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Before reminder updated to ${newTime.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+        }
+    }
+
+    /**
+     * Edits an existing day of reminder time in-place.
+     */
+    fun editMorningReminderTime(oldTime: LocalTime, newTime: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updatedTimes = (currentSettings.morningReminderTimes - oldTime) + newTime
+            val newPrimary = if (currentSettings.primaryMorningTime == oldTime) newTime else currentSettings.primaryMorningTime
+            val updated = currentSettings.copy(
+                primaryMorningTime = newPrimary,
+                morningReminderTimes = updatedTimes
+            )
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Of reminder updated to ${newTime.format(DateTimeFormatter.ofPattern("HH:mm"))}."
+        }
+    }
+
+    /**
+     * Removes a day before reminder time.
+     */
+    fun removeEveningReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updatedTimes = currentSettings.eveningReminderTimes - time
+            val newPrimary = if (currentSettings.primaryEveningTime == time) null else currentSettings.primaryEveningTime
+            val updated = currentSettings.copy(
+                primaryEveningTime = newPrimary,
+                eveningReminderTimes = updatedTimes
+            )
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Before reminder removed."
+        }
+    }
+
+    /**
+     * Removes a day of reminder time.
+     */
+    fun removeMorningReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updatedTimes = currentSettings.morningReminderTimes - time
+            val newPrimary = if (currentSettings.primaryMorningTime == time) null else currentSettings.primaryMorningTime
+            val updated = currentSettings.copy(
+                primaryMorningTime = newPrimary,
+                morningReminderTimes = updatedTimes
+            )
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Day Of reminder removed."
+        }
+    }
+
+    /**
+     * Removes an extra reminder time.
+     */
+    fun removeExtraReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            val currentSettings = repository.notificationSettings.first()
+            val updatedEvening = currentSettings.eveningReminderTimes - time
+            val updatedMorning = currentSettings.morningReminderTimes - time
+            val newPrimaryEvening = if (currentSettings.primaryEveningTime == time) null else currentSettings.primaryEveningTime
+            val newPrimaryMorning = if (currentSettings.primaryMorningTime == time) null else currentSettings.primaryMorningTime
+            val updated = currentSettings.copy(
+                primaryEveningTime = newPrimaryEvening,
+                primaryMorningTime = newPrimaryMorning,
+                eveningReminderTimes = updatedEvening,
+                morningReminderTimes = updatedMorning
+            )
+            repository.updateNotificationSettings(updated)
+            _userMessage.value = "Extra reminder removed."
         }
     }
 

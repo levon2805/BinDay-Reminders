@@ -32,18 +32,38 @@ data class OnboardingUiState(
     val searchError: String? = null,
     val primaryCollectionDay: DayOfWeek? = null,
     val binSetups: List<OnboardingBinSetup> = defaultBinSetups(),
-    val eveningReminderTime: LocalTime? = LocalTime.of(19, 0),
-    val morningReminderTime: LocalTime? = LocalTime.of(7, 0),
+    val primaryEveningTime: LocalTime? = LocalTime.of(19, 0),
+    val primaryMorningTime: LocalTime? = LocalTime.of(7, 0),
+    val eveningReminderTimes: Set<LocalTime> = setOf(LocalTime.of(19, 0)),
+    val morningReminderTimes: Set<LocalTime> = setOf(LocalTime.of(7, 0)),
     val reminderEnabled: Boolean = true,
     val isCompleting: Boolean = false,
     val isCompleted: Boolean = false,
     val userMessage: String? = null
 ) {
+    val eveningReminderTime: LocalTime?
+        get() = if (primaryEveningTime != null && primaryEveningTime in eveningReminderTimes) {
+            primaryEveningTime
+        } else if (primaryEveningTime == null) {
+            null
+        } else {
+            eveningReminderTimes.firstOrNull()
+        }
+
+    val morningReminderTime: LocalTime?
+        get() = if (primaryMorningTime != null && primaryMorningTime in morningReminderTimes) {
+            primaryMorningTime
+        } else if (primaryMorningTime == null) {
+            null
+        } else {
+            morningReminderTimes.firstOrNull()
+        }
+
     val reminderTime: LocalTime
         get() = eveningReminderTime ?: morningReminderTime ?: LocalTime.of(19, 0)
 
     val reminderEveningBefore: Boolean
-        get() = eveningReminderTime != null
+        get() = eveningReminderTimes.isNotEmpty()
 }
 
 /**
@@ -344,13 +364,17 @@ class OnboardingViewModel(
     fun setReminderSettings(time: LocalTime, eveningBefore: Boolean, enabled: Boolean) {
         _uiState.update { state ->
             if (eveningBefore) {
+                val extraTimes = if (state.primaryEveningTime != null) state.eveningReminderTimes - state.primaryEveningTime else state.eveningReminderTimes
                 state.copy(
-                    eveningReminderTime = time,
+                    primaryEveningTime = time,
+                    eveningReminderTimes = extraTimes + time,
                     reminderEnabled = enabled
                 )
             } else {
+                val extraTimes = if (state.primaryMorningTime != null) state.morningReminderTimes - state.primaryMorningTime else state.morningReminderTimes
                 state.copy(
-                    morningReminderTime = time,
+                    primaryMorningTime = time,
+                    morningReminderTimes = extraTimes + time,
                     reminderEnabled = enabled
                 )
             }
@@ -358,17 +382,150 @@ class OnboardingViewModel(
     }
 
     /**
-     * Updates evening reminder time (or null if NONE).
+     * Updates evening reminder time (or clears all if null).
      */
     fun updateEveningReminderTime(time: LocalTime?) {
-        _uiState.update { it.copy(eveningReminderTime = time) }
+        _uiState.update { state ->
+            val oldPrimary = state.primaryEveningTime
+            val extraTimes = if (oldPrimary != null) state.eveningReminderTimes - oldPrimary else state.eveningReminderTimes
+            if (time == null) {
+                state.copy(
+                    primaryEveningTime = null,
+                    eveningReminderTimes = extraTimes
+                )
+            } else {
+                state.copy(
+                    primaryEveningTime = time,
+                    eveningReminderTimes = extraTimes + time
+                )
+            }
+        }
     }
 
     /**
-     * Updates morning reminder time (or null if NONE).
+     * Updates morning reminder time (or clears all if null).
      */
     fun updateMorningReminderTime(time: LocalTime?) {
-        _uiState.update { it.copy(morningReminderTime = time) }
+        _uiState.update { state ->
+            val oldPrimary = state.primaryMorningTime
+            val extraTimes = if (oldPrimary != null) state.morningReminderTimes - oldPrimary else state.morningReminderTimes
+            if (time == null) {
+                state.copy(
+                    primaryMorningTime = null,
+                    morningReminderTimes = extraTimes
+                )
+            } else {
+                state.copy(
+                    primaryMorningTime = time,
+                    morningReminderTimes = extraTimes + time
+                )
+            }
+        }
+    }
+
+    /**
+     * Adds an extra reminder time for evening before (if hour >= 12) or morning of (if hour < 12).
+     */
+    fun addExtraReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            if (time.hour >= 12) {
+                state.copy(eveningReminderTimes = state.eveningReminderTimes + time)
+            } else {
+                state.copy(morningReminderTimes = state.morningReminderTimes + time)
+            }
+        }
+    }
+
+    /**
+     * Adds a reminder time for the day before collection.
+     */
+    fun addEveningReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            state.copy(eveningReminderTimes = state.eveningReminderTimes + time)
+        }
+    }
+
+    /**
+     * Adds a reminder time for the day of collection.
+     */
+    fun addMorningReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            state.copy(morningReminderTimes = state.morningReminderTimes + time)
+        }
+    }
+
+    /**
+     * Edits an existing day before reminder time in-place.
+     */
+    fun editEveningReminderTime(oldTime: LocalTime, newTime: LocalTime) {
+        _uiState.update { state ->
+            val updatedTimes = (state.eveningReminderTimes - oldTime) + newTime
+            val newPrimary = if (state.primaryEveningTime == oldTime) newTime else state.primaryEveningTime
+            state.copy(
+                primaryEveningTime = newPrimary,
+                eveningReminderTimes = updatedTimes
+            )
+        }
+    }
+
+    /**
+     * Edits an existing day of reminder time in-place.
+     */
+    fun editMorningReminderTime(oldTime: LocalTime, newTime: LocalTime) {
+        _uiState.update { state ->
+            val updatedTimes = (state.morningReminderTimes - oldTime) + newTime
+            val newPrimary = if (state.primaryMorningTime == oldTime) newTime else state.primaryMorningTime
+            state.copy(
+                primaryMorningTime = newPrimary,
+                morningReminderTimes = updatedTimes
+            )
+        }
+    }
+
+    /**
+     * Removes a day before reminder time.
+     */
+    fun removeEveningReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            val updatedTimes = state.eveningReminderTimes - time
+            val newPrimary = if (state.primaryEveningTime == time) null else state.primaryEveningTime
+            state.copy(
+                primaryEveningTime = newPrimary,
+                eveningReminderTimes = updatedTimes
+            )
+        }
+    }
+
+    /**
+     * Removes a day of reminder time.
+     */
+    fun removeMorningReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            val updatedTimes = state.morningReminderTimes - time
+            val newPrimary = if (state.primaryMorningTime == time) null else state.primaryMorningTime
+            state.copy(
+                primaryMorningTime = newPrimary,
+                morningReminderTimes = updatedTimes
+            )
+        }
+    }
+
+    /**
+     * Removes an extra reminder time.
+     */
+    fun removeExtraReminderTime(time: LocalTime) {
+        _uiState.update { state ->
+            val updatedEvening = state.eveningReminderTimes - time
+            val updatedMorning = state.morningReminderTimes - time
+            val newPrimaryEvening = if (state.primaryEveningTime == time) null else state.primaryEveningTime
+            val newPrimaryMorning = if (state.primaryMorningTime == time) null else state.primaryMorningTime
+            state.copy(
+                primaryEveningTime = newPrimaryEvening,
+                primaryMorningTime = newPrimaryMorning,
+                eveningReminderTimes = updatedEvening,
+                morningReminderTimes = updatedMorning
+            )
+        }
     }
 
     /**
@@ -426,8 +583,10 @@ class OnboardingViewModel(
 
             val settings = NotificationSettings(
                 reminderEnabled = _uiState.value.reminderEnabled,
-                eveningReminderTime = _uiState.value.eveningReminderTime,
-                morningReminderTime = _uiState.value.morningReminderTime
+                primaryEveningTime = _uiState.value.primaryEveningTime,
+                primaryMorningTime = _uiState.value.primaryMorningTime,
+                eveningReminderTimes = _uiState.value.eveningReminderTimes,
+                morningReminderTimes = _uiState.value.morningReminderTimes
             )
 
             repository.completeOnboardingSetup(

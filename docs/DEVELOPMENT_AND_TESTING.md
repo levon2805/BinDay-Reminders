@@ -39,7 +39,7 @@ Output APK location:
 
 ## Unit Testing
 
-BinDay features a unit test suite comprising **113 tests** covering all domain use cases, ViewModels, schedule engines, bank holiday algorithms, data repositories, and workers.
+BinDay features an expanded automated unit test suite comprising **139 unit tests passing across 18 test suites** covering all domain use cases, ViewModels, schedule engines, bank holiday algorithms, data repositories, workers, notification receivers, and date/time utilities.
 
 ### Running Unit Tests
 
@@ -56,22 +56,23 @@ The unit tests are located in `app/src/test/java/com/example/binminder/`:
 | Test Class | Scope / Target Covered |
 | :--- | :--- |
 | `BinLidColourTest` | Dual-colour bin creation, lid colour fallbacks, preset matching |
-| `NotificationSettingsTest` | Notification preferences copying, defaults, time formatting |
+| `NotificationSettingsTest` | Notification preferences copying, defaults, time formatting, 12h/24h formatting |
 | `CouncilLookupRepositoryTest` | Postcode lookup parsing, council matching, fallback URLs |
 | `CouncilLookupServiceTest` | Retrofit service responses and error handling |
 | `GetUpcomingCollectionsUseCaseTest` | Upcoming event calculations, sorting, date filtering |
 | `LookupCouncilScheduleUseCaseTest` | Default bin schedule generation by council |
 | `ResetTimetableUseCaseTest` | Timetable reset, bin deletion, onboarding state reset |
-| `ToggleBinPutOutUseCaseTest` | Marking bin put out, string set formatting, toggle mechanics |
+| `ToggleBinPutOutUseCaseTest` | Marking bin put out, string set formatting, date-scoped composite key toggling |
 | `BankHolidayCalculatorTest` | Easter calculation (Meeus/Jones/Butcher), UK bank holiday dates, shifts |
 | `ScheduleEngineTest` | Weekly, fortnightly, monthly schedule calculations, start week offsets |
 | `AddEditBinViewModelTest` | Bin creation/editing, color swatch selection, input validation |
 | `BinListViewModelTest` | Bin listing, enable/disable toggle, deletion flow |
 | `DashboardViewModelTest` | Upcoming collections UI state, hero banner, mark put out actions |
-| `OnboardingViewModelTest` | Multi-step wizard flow, postcode validation, schedule setup |
-| `SettingsViewModelTest` | Notification time updates, theme changes, reset workflows |
+| `OnboardingViewModelTest` | Multi-step wizard flow, postcode validation, schedule setup, multiple reminders sub-menu |
+| `SettingsViewModelTest` | Notification time updates, multiple reminder slots, theme changes, reset workflows |
 | `CalendarExportUtilsTest` | iCalendar ICS string generation, RRULE formatting, VALARM generation |
-| `NotificationSchedulerTest` | Alarm intent generation, WorkManager task scheduling |
+| `DateUtilsTest` | 12h/24h system clock formatting (`DateFormat.is24HourFormat`) and time string parsing |
+| `NotificationSchedulerTest` | Alarm intent generation, WorkManager task scheduling, Android 12+ SecurityException fallback, notification debounce logic |
 
 ---
 
@@ -92,7 +93,7 @@ adb shell am start -n com.example.binminder/.MainActivity
 
 ---
 
-## Code Style & Conventions
+## Code Style & Standards
 
 * **Language**: Idiomatic Kotlin using extension functions, `StateFlow`, `coroutineScope`, and immutability.
 * **Spelling Standard**: **British English** (`colour`, `customise`, `behaviour`, `organise`, `programme`, `cancelled`, `centre`, `favourite`, `grey`) MUST be enforced consistently across all KDoc documentation and inline comments.

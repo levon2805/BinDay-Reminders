@@ -8,7 +8,7 @@ This document details the core features and functional mechanics built into **Bi
 
 * **Postcode Resolution**: Users enter any valid UK postcode (e.g., `SW1A 1AA`, `M1 1AE`, `EH1 1YZ`). BinDay queries the open `postcodes.io` API to extract the local authority administrative district.
 * **Database Matcher**: Matches the district against an embedded dataset of 380+ UK local authorities spanning England, Scotland, Wales, and Northern Ireland.
-* **Default Schedule Provisioning**: Automatically pre-populates default wheelie bin configurations (e.g. General Waste, Dry Mixed Recycling, Food Waste, Garden Waste) based on standard council provision.
+* **Default Schedule Provisioning**: Automatically pre-populates default wheelie bin configurations (e.g., General Waste, Dry Mixed Recycling, Food Waste, Garden Waste) based on standard council provision.
 
 ---
 
@@ -34,7 +34,7 @@ This document details the core features and functional mechanics built into **Bi
   * Spring Bank Holiday.
   * Summer Bank Holiday.
   * Christmas Day & Boxing Day (plus substitute days).
-* **Automatic Shift Preview**: Analyzes upcoming collection dates. If a collection falls on or immediately after a bank holiday, BinDay calculates a 1-day collection shift (e.g. Friday collection moved to Saturday) and presents a warning banner on the Dashboard and Settings screens.
+* **Automatic Shift Preview**: Analyzes upcoming collection dates. If a collection falls on or immediately after a bank holiday, BinDay calculates a 1-day collection shift (e.g., Friday collection moved to Saturday) and presents a warning banner on the Dashboard and Settings screens.
 
 ---
 
@@ -53,11 +53,27 @@ This document details the core features and functional mechanics built into **Bi
 ## 5. Notification Engine & Exact Alarms
 
 * **Dual-Slot Notification Strategy**:
-  * **Evening Before**: 19:00, 20:00, 21:00, or custom time.
-  * **Morning Of**: 06:00, 07:00, 08:00, or custom time.
-* **Exact Alarm Scheduling (`AlarmManager`)**: Uses `setExactAndAllowWhileIdle()` on Android 6.0+ to guarantee notifications trigger precisely at user-configured times even in Doze mode.
-* **Heads-Up Banner (`IMPORTANCE_HIGH`)**: Displays high-priority notifications with vibration patterns and prominent wheelie bin icons.
-* **Interactive Notification Actions**:
-  * Includes a **"Mark Put Out"** action button in the notification shade, allowing users to acknowledge putting out their bin without opening the app.
-* **Debounce & Suppress Mechanics**: Marking a bin as put out automatically suppresses subsequent reminders for that collection date.
-* **Reboot Persistence (`BootReceiver`)**: Automatically re-establishes all alarm triggers whenever the Android device reboots or updates.
+  * **Day Before (Evening)**: 19:00, 20:00, 21:00, or custom times.
+  * **Day Of (Morning)**: 06:00, 07:00, 08:00, or custom times.
+* **Advanced Notifications Sub-Menu (`MultipleRemindersDialog`)**:
+  * Provides an interactive dialog interface in both Onboarding and Settings screens for managing multiple reminder times per slot.
+  * Supports in-place adding, editing, and deleting of reminder times for both Day Before and Day Of slots.
+  * Includes a time picker with instant validation preventing duplicate time entries.
+* **System 12h/24h Clock Detection (`DateFormat.is24HourFormat`)**:
+  * Dynamically detects user system time formatting preferences via `DateFormat.is24HourFormat(context)` in `DateUtils.formatTime`.
+  * Formats time strings across all screens, dialogs, and notifications into 12-hour (e.g., `7:00 PM`) or 24-hour (e.g., `19:00`) formats accordingly.
+* **Triple-Layer Exact Alarm Engine (`AlarmManager` & `WorkManager`)**:
+  * Uses `AlarmManager.setExactAndAllowWhileIdle()` on Android 6.0+ (API 23+) to guarantee precise trigger delivery even during system Doze mode.
+  * Handles Android 12+ (API 31+) `SecurityException` gracefully when exact alarm permissions (`SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM`) are revoked, falling back seamlessly to `setAndAllowWhileIdle()` and scheduling background sync tasks via `WorkManager`.
+* **Interactive Notification Shade Action ("Put Bins Out") via `NotificationActionReceiver`**:
+  * Embeds an interactive "Done" / "Mark as Put Out" action button directly into system heads-up notifications.
+  * Handled asynchronously by `NotificationActionReceiver` (`MarkBinPutOutReceiver`), which parses the target collection date and bin IDs from intent extras, marks the bins as put out without opening the main application UI, and cancels the notification.
+* **Date-Scoped Put-Out State Isolation (`"${binId}_${collectionDate}"`)**:
+  * Scopes bin put-out status to a composite string key consisting of the unique bin ID and the specific ISO date (`"${binId}_${collectionDate}"`).
+  * Guarantees complete isolation across collection dates, ensuring that marking a bin as put out for today's collection date does not affect future recurring collection dates or pollute global state.
+* **Debounce & Suppress Mechanics**:
+  * Maintains a 1-hour anti-spam debounce window using shared preferences to prevent duplicate notification posts between exact alarm triggers and background `WorkManager` runs.
+  * Automatically suppresses reminder notifications if all bins scheduled for a collection date have already been marked as put out.
+* **Reboot Persistence (`BootReceiver`)**:
+  * Listens for `ACTION_BOOT_COMPLETED`, `ACTION_MY_PACKAGE_REPLACED`, `ACTION_LOCKED_BOOT_COMPLETED`, and `QUICKBOOT_POWERON` broadcasts.
+  * Automatically reschedules all active exact alarms and WorkManager fallback jobs whenever the device reboots or application packages are updated.

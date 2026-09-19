@@ -79,37 +79,25 @@ class NotificationWorker(
             val events = ScheduleEngine.generateCollectionEvents(bins, targetDate, targetDate)
                 .filter { it.collectionDate == targetDate }
 
-            if (events.isNotEmpty()) {
+            val unPutOutEvents = events.filter { !putOutBins.contains("${it.binId}_${it.collectionDate}") }
 
-                // Check if all upcoming collection bins for targetDate are marked as put out (isPutOut == true)
-                val allBinsPutOut = events.all { putOutBins.contains("${it.binId}_${it.collectionDate}") }
-                if (allBinsPutOut) {
+            if (unPutOutEvents.isEmpty()) {
+                if (events.isNotEmpty()) {
                     Log.d(TAG, "Upcoming collection bins for $targetDate are marked put out (isPutOut == true). Skipping notification.")
-                    continue
                 }
+                continue
+            }
 
-                val binNames = events.joinToString(separator = " and ") { it.binName }
-                val title = if (isEvening) {
-                    "Tomorrow's Bin Collection"
-                } else {
-                    "Today's Bin Collection"
-                }
-
-                val isPlural = events.size > 1
-                val message = if (isPlural) {
-                    "Please remember to put out your $binNames bins."
-                } else {
-                    "Please remember to put out your $binNames bin."
-                }
-
-                Log.d(TAG, "Posting high-priority reminder notification for $targetDate ($binNames)")
+            val content = NotificationHelper.formatNotificationContent(unPutOutEvents, isEvening)
+            if (content != null) {
+                Log.d(TAG, "Posting high-priority reminder notification for $targetDate (${content.binNames})")
                 NotificationHelper.postCollectionReminderNotification(
                     context = appContext,
-                    title = title,
-                    message = message,
+                    title = content.title,
+                    message = content.message,
                     notificationId = targetDate.hashCode(),
-                    binIds = events.map { it.binId },
-                    binNames = binNames,
+                    binIds = content.unPutOutBinIds,
+                    binNames = content.binNames,
                     targetDateStr = targetDate.toString()
                 )
             }

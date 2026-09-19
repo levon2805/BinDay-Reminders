@@ -8,7 +8,6 @@ import android.os.Build
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.binminder.data.local.AppDatabase
@@ -21,9 +20,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
@@ -36,7 +37,8 @@ data class ReminderTarget(
     val slot: ReminderSlot,
     val targetDateTime: LocalDateTime,
     val collectionDate: LocalDate,
-    val delayMillis: Long
+    val delayMillis: Long,
+    val reminderTime: LocalTime? = null
 )
 
 /**
@@ -65,7 +67,7 @@ object NotificationScheduler {
         settings: NotificationSettings,
         now: LocalDateTime = LocalDateTime.now()
     ): List<ReminderTarget> {
-        if (!settings.reminderEnabled || (settings.eveningReminderTime == null && settings.morningReminderTime == null)) {
+        if (!settings.reminderEnabled || (settings.eveningReminderTimes.isEmpty() && settings.morningReminderTimes.isEmpty())) {
             return emptyList()
         }
 
@@ -80,33 +82,36 @@ object NotificationScheduler {
         val distinctCollectionDates = events.map { it.collectionDate }.distinct().sorted()
 
         val targets = mutableListOf<ReminderTarget>()
+        val pastCutoff = now.minusMinutes(1)
 
         for (collectionDate in distinctCollectionDates) {
-            // 1. Evening Before reminder
-            if (settings.eveningReminderTime != null) {
+            // 1. Evening Before reminders for each time in eveningReminderTimes
+            for (time in settings.eveningReminderTimes) {
                 val eveningTargetDate = collectionDate.minusDays(1)
-                val eveningTargetDateTime = LocalDateTime.of(eveningTargetDate, settings.eveningReminderTime)
-                if (eveningTargetDateTime.isAfter(now)) {
-                    val delay = Duration.between(now, eveningTargetDateTime).toMillis().coerceAtLeast(0)
-                    targets.add(ReminderTarget(ReminderSlot.EVENING, eveningTargetDateTime, collectionDate, delay))
+                val eveningTargetDateTime = LocalDateTime.of(eveningTargetDate, time)
+                if (!eveningTargetDateTime.isBefore(pastCutoff)) {
+                    val rawDelayMillis = Duration.between(now, eveningTargetDateTime).toMillis()
+                    val delayMillis = maxOf(1000L, rawDelayMillis)
+                    targets.add(ReminderTarget(ReminderSlot.EVENING, eveningTargetDateTime, collectionDate, delayMillis, time))
                 }
             }
 
-            // 2. Morning Of reminder
-            if (settings.morningReminderTime != null) {
-                val morningTargetDateTime = LocalDateTime.of(collectionDate, settings.morningReminderTime)
-                if (morningTargetDateTime.isAfter(now)) {
-                    val delay = Duration.between(now, morningTargetDateTime).toMillis().coerceAtLeast(0)
-                    targets.add(ReminderTarget(ReminderSlot.MORNING, morningTargetDateTime, collectionDate, delay))
+            // 2. Morning Of reminders for each time in morningReminderTimes
+            for (time in settings.morningReminderTimes) {
+                val morningTargetDateTime = LocalDateTime.of(collectionDate, time)
+                if (!morningTargetDateTime.isBefore(pastCutoff)) {
+                    val rawDelayMillis = Duration.between(now, morningTargetDateTime).toMillis()
+                    val delayMillis = maxOf(1000L, rawDelayMillis)
+                    targets.add(ReminderTarget(ReminderSlot.MORNING, morningTargetDateTime, collectionDate, delayMillis, time))
                 }
             }
         }
 
-        // Return earliest future target for each slot (EVENING and MORNING)
-        val earliestEvening = targets.filter { it.slot == ReminderSlot.EVENING }.minByOrNull { it.targetDateTime }
-        val earliestMorning = targets.filter { it.slot == ReminderSlot.MORNING }.minByOrNull { it.targetDateTime }
+        val sortedTargets = targets.sortedBy { it.targetDateTime }
+        if (sortedTargets.isEmpty()) return emptyList()
 
-        return listOfNotNull(earliestEvening, earliestMorning).sortedBy { it.targetDateTime }
+        val earliestCollectionDate = sortedTargets.minOf { it.collectionDate }
+        return sortedTargets.filter { it.collectionDate == earliestCollectionDate }
     }
 
     /**
@@ -122,14 +127,16 @@ object NotificationScheduler {
                 val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
 
                 val currentSettings = settings ?: repository.notificationSettings.first()
+                
+                // Systematically cancel all previous exact alarms and background work tasks first
+                cancelReminder(appContext, currentSettings)
+
                 if (!currentSettings.reminderEnabled) {
-                    cancelReminder(appContext)
                     return@launch
                 }
 
                 val bins = repository.getBinsList().filter { it.isEnabled }
                 if (bins.isEmpty()) {
-                    cancelReminder(appContext)
                     return@launch
                 }
 
@@ -137,7 +144,6 @@ object NotificationScheduler {
                 val targets = calculateNextReminderTargets(bins, currentSettings, now)
 
                 if (targets.isEmpty()) {
-                    cancelReminder(appContext)
                     return@launch
                 }
 
@@ -149,11 +155,10 @@ object NotificationScheduler {
 
                 for (target in targets) {
                     // A. Schedule Exact Alarm via AlarmManager
-                    scheduleExactAlarm(appContext, target.slot, target.targetDateTime, target.collectionDate)
+                    scheduleExactAlarm(appContext, target.slot, target.targetDateTime, target.collectionDate, target.reminderTime)
 
                     // B. Enqueue High-Priority OneTime WorkManager Fallback
                     if (workManager != null) {
-                        // Cancel any legacy periodic workers to prevent incorrect daily firing
                         workManager.cancelUniqueWork(WORK_NAME)
                         workManager.cancelUniqueWork(WORK_NAME_EVENING)
                         workManager.cancelUniqueWork(WORK_NAME_MORNING)
@@ -164,12 +169,12 @@ object NotificationScheduler {
                                 "TARGET_DATE" to target.collectionDate.toString()
                             )
                             val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                                // Add 2-minute buffer so WorkManager fallback only runs if AlarmManager fails/is killed
                                 .setInitialDelay(target.delayMillis + 120_000L, TimeUnit.MILLISECONDS)
                                 .setInputData(workData)
                                 .build()
 
-                            val oneTimeWorkName = if (target.slot == ReminderSlot.EVENING) WORK_NAME_ONETIME_EVENING else WORK_NAME_ONETIME_MORNING
+                            val timeTag = target.reminderTime?.toString() ?: ""
+                            val oneTimeWorkName = "binminder_onetime_${target.slot.name}_${target.collectionDate}_$timeTag"
                             workManager.enqueueUniqueWork(
                                 oneTimeWorkName,
                                 ExistingWorkPolicy.REPLACE,
@@ -193,11 +198,28 @@ object NotificationScheduler {
         scheduleNotificationWorker(context, settings)
     }
 
+    fun generateAlarmRequestCode(date: LocalDate, time: LocalTime, isMorning: Boolean): Int {
+        val dateHash = date.year * 10000 + date.monthValue * 100 + date.dayOfMonth
+        val timeHash = time.hour * 100 + time.minute
+        val slotFlag = if (isMorning) 1 else 2
+        return (dateHash.hashCode() * 31 + timeHash) * 31 + slotFlag
+    }
+
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            alarmManager?.canScheduleExactAlarms() ?: false
+        } else {
+            true
+        }
+    }
+
     private fun scheduleExactAlarm(
         context: Context,
         slot: ReminderSlot,
         targetDateTime: LocalDateTime,
-        collectionDate: LocalDate
+        collectionDate: LocalDate,
+        reminderTime: LocalTime? = null
     ) {
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
@@ -205,9 +227,11 @@ object NotificationScheduler {
                 action = "com.example.binminder.ACTION_SHOW_REMINDER"
                 putExtra("REMINDER_SLOT", slot.name)
                 putExtra("TARGET_DATE", collectionDate.toString())
+                reminderTime?.let { putExtra("REMINDER_TIME", it.toString()) }
             }
 
-            val requestCode = if (slot == ReminderSlot.EVENING) REQUEST_CODE_EVENING else REQUEST_CODE_MORNING
+            val time = reminderTime ?: targetDateTime.toLocalTime()
+            val requestCode = generateAlarmRequestCode(collectionDate, time, slot == ReminderSlot.MORNING)
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 requestCode,
@@ -219,16 +243,90 @@ object NotificationScheduler {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    try {
+                        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    } catch (e: SecurityException) {
+                        Log.w(TAG, "SecurityException on setExactAndAllowWhileIdle, falling back gracefully to setAndAllowWhileIdle", e)
+                        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    }
                 } else {
+                    Log.w(TAG, "Exact alarm permission not granted (canScheduleExactAlarms == false). Falling back gracefully to setAndAllowWhileIdle.")
                     alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                 }
             } else {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                try {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "SecurityException on setExactAndAllowWhileIdle, falling back gracefully to setAndAllowWhileIdle", e)
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to schedule exact alarm for $slot", e)
         }
+    }
+
+    /**
+     * Cancels exact alarms and WorkManager tasks for a specific collection date when bins are put out.
+     */
+    fun cancelAlarmsForCollectionDate(context: Context, collectionDate: LocalDate, settings: NotificationSettings? = null) {
+        try {
+            val appContext = context.applicationContext
+            val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            if (alarmManager != null) {
+                val currentSettings = settings ?: runBlocking { NotificationSettingsDataStore(appContext).notificationSettings.first() }
+
+                for (time in currentSettings.eveningReminderTimes) {
+                    val requestCode = generateAlarmRequestCode(collectionDate, time, isMorning = false)
+                    val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
+                        action = "com.example.binminder.ACTION_SHOW_REMINDER"
+                    }
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        appContext,
+                        requestCode,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                }
+
+                for (time in currentSettings.morningReminderTimes) {
+                    val requestCode = generateAlarmRequestCode(collectionDate, time, isMorning = true)
+                    val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
+                        action = "com.example.binminder.ACTION_SHOW_REMINDER"
+                    }
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        appContext,
+                        requestCode,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                }
+
+                val intentEvening = Intent(appContext, NotificationAlarmReceiver::class.java)
+                val pendingEvening = PendingIntent.getBroadcast(
+                    appContext,
+                    REQUEST_CODE_EVENING,
+                    intentEvening,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.cancel(pendingEvening)
+
+                val intentMorning = Intent(appContext, NotificationAlarmReceiver::class.java)
+                val pendingMorning = PendingIntent.getBroadcast(
+                    appContext,
+                    REQUEST_CODE_MORNING,
+                    intentMorning,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.cancel(pendingMorning)
+            }
+
+            cancelOrSuppressNotificationForToday(appContext, collectionDate)
+        } catch (_: Throwable) {}
     }
 
     /**
@@ -260,11 +358,12 @@ object NotificationScheduler {
     /**
      * Cancels active exact alarms and WorkManager reminder tasks.
      */
-    fun cancelReminder(context: Context) {
+    fun cancelReminder(context: Context, settings: NotificationSettings? = null) {
         try {
             val appContext = context.applicationContext
             val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             if (alarmManager != null) {
+                // Cancel legacy request codes
                 val intentEvening = Intent(appContext, NotificationAlarmReceiver::class.java)
                 val pendingEvening = PendingIntent.getBroadcast(
                     appContext,
@@ -273,6 +372,7 @@ object NotificationScheduler {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 alarmManager.cancel(pendingEvening)
+                pendingEvening.cancel()
 
                 val intentMorning = Intent(appContext, NotificationAlarmReceiver::class.java)
                 val pendingMorning = PendingIntent.getBroadcast(
@@ -282,6 +382,40 @@ object NotificationScheduler {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 alarmManager.cancel(pendingMorning)
+                pendingMorning.cancel()
+
+                // Systematically cancel all dynamic request codes for next 60 days
+                val startDate = LocalDate.now().minusDays(2)
+                val endDate = startDate.plusDays(60)
+                val timesToCancel = mutableSetOf(
+                    LocalTime.of(18, 0), LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0),
+                    LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0), LocalTime.of(9, 0)
+                )
+                if (settings != null) {
+                    timesToCancel.addAll(settings.eveningReminderTimes)
+                    timesToCancel.addAll(settings.morningReminderTimes)
+                }
+
+                var date = startDate
+                while (!date.isAfter(endDate)) {
+                    for (slot in ReminderSlot.entries) {
+                        for (time in timesToCancel) {
+                            val requestCode = generateAlarmRequestCode(date, time, isMorning = (slot == ReminderSlot.MORNING))
+                            val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
+                                action = "com.example.binminder.ACTION_SHOW_REMINDER"
+                            }
+                            val pendingIntent = PendingIntent.getBroadcast(
+                                appContext,
+                                requestCode,
+                                intent,
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
+                            alarmManager.cancel(pendingIntent)
+                            pendingIntent.cancel()
+                        }
+                    }
+                    date = date.plusDays(1)
+                }
             }
 
             val workManager = try {

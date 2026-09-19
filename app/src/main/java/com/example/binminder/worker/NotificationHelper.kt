@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.binminder.MainActivity
 import com.example.binminder.R
+import com.example.binminder.data.model.CollectionEvent
 
 /**
  * Helper object for building and posting high-priority heads-up bin collection system notifications.
@@ -110,7 +111,7 @@ object NotificationHelper {
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_app_logo)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -169,5 +170,57 @@ object NotificationHelper {
             .edit()
             .clear()
             .apply()
+    }
+
+    /**
+     * Data class holding formatted notification title, message, bin names, and un-put-out bin IDs.
+     */
+    data class NotificationContent(
+        val title: String,
+        val message: String,
+        val binNames: String,
+        val unPutOutBinIds: List<Long>
+    )
+
+    /**
+     * Formats notification title, message, bin names, and bin IDs strictly for un-put-out collection events.
+     * Returns null if no un-put-out events exist.
+     */
+    fun formatNotificationContent(
+        unPutOutEvents: List<CollectionEvent>,
+        isEvening: Boolean
+    ): NotificationContent? {
+        if (unPutOutEvents.isEmpty()) return null
+
+        val binNamesList = unPutOutEvents.map { it.binName }
+        val binNames = when (binNamesList.size) {
+            0 -> return null
+            1 -> binNamesList.first()
+            2 -> "${binNamesList[0]} and ${binNamesList[1]}"
+            else -> {
+                val allButLast = binNamesList.dropLast(1).joinToString(", ")
+                "$allButLast and ${binNamesList.last()}"
+            }
+        }
+
+        val title = if (isEvening) {
+            "Tomorrow's Bin Collection"
+        } else {
+            "Today's Bin Collection"
+        }
+
+        val isPlural = unPutOutEvents.size > 1
+        val message = if (isPlural) {
+            "Please remember to put out your $binNames bins."
+        } else {
+            "Please remember to put out your $binNames bin."
+        }
+
+        return NotificationContent(
+            title = title,
+            message = message,
+            binNames = binNames,
+            unPutOutBinIds = unPutOutEvents.map { it.binId }
+        )
     }
 }

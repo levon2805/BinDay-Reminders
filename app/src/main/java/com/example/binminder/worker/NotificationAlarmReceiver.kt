@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * BroadcastReceiver triggered by AlarmManager exact alarms for bin collection reminders.
@@ -45,8 +46,21 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
 
                 val slotStr = intent?.getStringExtra("REMINDER_SLOT")
                 val targetDateStr = intent?.getStringExtra("TARGET_DATE")
+                val reminderTimeStr = intent?.getStringExtra("REMINDER_TIME")
 
                 val isEvening = slotStr == "EVENING" || (slotStr == null && settings.eveningReminderTime != null)
+
+                val triggeredTime: LocalTime? = reminderTimeStr?.let {
+                    runCatching { LocalTime.parse(it) }.getOrNull()
+                } ?: if (isEvening) settings.eveningReminderTime else settings.morningReminderTime
+
+                val activeSet = if (isEvening) settings.eveningReminderTimes else settings.morningReminderTimes
+
+                if (triggeredTime == null || !activeSet.contains(triggeredTime)) {
+                    Log.d(TAG, "Triggered time $triggeredTime ($slotStr) is no longer active in settings ($activeSet). Discarding immediately.")
+                    return@launch
+                }
+
                 val targetDate = if (targetDateStr != null) {
                     runCatching { LocalDate.parse(targetDateStr) }.getOrDefault(
                         if (isEvening) LocalDate.now().plusDays(1) else LocalDate.now()
@@ -61,36 +75,24 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                 val events = ScheduleEngine.generateCollectionEvents(bins, targetDate, targetDate)
                     .filter { it.collectionDate == targetDate }
 
-                if (events.isNotEmpty()) {
-                    val allBinsPutOut = events.all { putOutBins.contains("${it.binId}_${it.collectionDate}") }
-                    if (!allBinsPutOut) {
-                        val binNames = events.joinToString(separator = " and ") { it.binName }
-                        val title = if (isEvening) {
-                            "Tomorrow's Bin Collection"
-                        } else {
-                            "Today's Bin Collection"
-                        }
+                val unPutOutEvents = events.filter { !putOutBins.contains("${it.binId}_${it.collectionDate}") }
 
-                        val isPlural = events.size > 1
-                        val message = if (isPlural) {
-                            "Please remember to put out your $binNames bins."
-                        } else {
-                            "Please remember to put out your $binNames bin."
-                        }
-
-                        Log.d(TAG, "Posting high-priority heads-up reminder notification for $targetDate ($binNames)")
+                if (unPutOutEvents.isNotEmpty()) {
+                    val content = NotificationHelper.formatNotificationContent(unPutOutEvents, isEvening)
+                    if (content != null) {
+                        Log.d(TAG, "Posting high-priority heads-up reminder notification for $targetDate (${content.binNames})")
                         NotificationHelper.postCollectionReminderNotification(
                             context = appContext,
-                            title = title,
-                            message = message,
+                            title = content.title,
+                            message = content.message,
                             notificationId = targetDate.hashCode(),
-                            binIds = events.map { it.binId },
-                            binNames = binNames,
+                            binIds = content.unPutOutBinIds,
+                            binNames = content.binNames,
                             targetDateStr = targetDate.toString()
                         )
-                    } else {
-                        Log.d(TAG, "All collection bins for $targetDate are marked put out (isPutOut == true). Skipping notification.")
                     }
+                } else if (events.isNotEmpty()) {
+                    Log.d(TAG, "All collection bins for $targetDate are marked put out (isPutOut == true). Skipping notification.")
                 }
 
                 // Recalculate target times and set next exact alarms / WorkManager tasks
