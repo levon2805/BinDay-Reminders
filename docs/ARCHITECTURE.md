@@ -4,7 +4,7 @@
 
 ---
 
-## 🏛️ Layered Architecture
+## Layered Architecture
 
 ```
                   ┌─────────────────────────────────────────┐
@@ -109,7 +109,7 @@ Handles notification alarms and background maintenance:
 
 ---
 
-## 🔒 Security & Data Privacy
+## Security & Data Privacy
 
 * **Local-First Architecture**: User postcodes, bin schedules, and notification records remain 100% on-device inside private app storage (Room & DataStore).
 * **Minimal Network Requests**: External HTTP requests are strictly limited to postcode coordinate lookups via HTTPS to `postcodes.io`. No user telemetry or tracking data is transmitted.

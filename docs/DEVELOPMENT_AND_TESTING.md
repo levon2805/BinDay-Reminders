@@ -4,7 +4,7 @@ This guide provides instructions for setting up the development environment, run
 
 ---
 
-## 🛠️ Environment Prerequisites
+## Environment Prerequisites
 
 * **Operating System**: Windows, macOS, or Linux.
 * **Android Studio**: Android Studio Ladybug (2024.2.1) or newer recommended.
@@ -16,7 +16,7 @@ This guide provides instructions for setting up the development environment, run
 
 ---
 
-## 🏗️ Build Commands
+## Build Commands
 
 ### 1. Compile and Assemble Debug APK
 
@@ -37,7 +37,7 @@ Output APK location:
 
 ---
 
-## 🧪 Unit Testing
+## Unit Testing
 
 BinDay features a unit test suite comprising **113 tests** covering all domain use cases, ViewModels, schedule engines, bank holiday algorithms, data repositories, and workers.
 
@@ -75,7 +75,7 @@ The unit tests are located in `app/src/test/java/com/example/binminder/`:
 
 ---
 
-## 📱 Installing Debug APK on Device or Emulator
+## Installing Debug APK on Device or Emulator
 
 1. Connect an Android device with USB Debugging enabled, or launch an Android Virtual Device (AVD).
 2. Install the compiled debug APK:
@@ -92,7 +92,7 @@ adb shell am start -n com.example.binminder/.MainActivity
 
 ---
 
-## 📏 Code Style & Conventions
+## Code Style & Conventions
 
 * **Language**: Idiomatic Kotlin using extension functions, `StateFlow`, `coroutineScope`, and immutability.
 * **Spelling Standard**: **British English** (`colour`, `customise`, `behaviour`, `organise`, `programme`, `cancelled`, `centre`, `favourite`, `grey`) MUST be enforced consistently across all KDoc documentation and inline comments.

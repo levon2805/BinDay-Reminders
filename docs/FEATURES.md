@@ -4,7 +4,7 @@ This document details the core features and functional mechanics built into **Bi
 
 ---
 
-## 🗺️ 1. Postcode Lookup & Council Auto-Matching
+## 1. Postcode Lookup & Council Auto-Matching
 
 * **Postcode Resolution**: Users enter any valid UK postcode (e.g., `SW1A 1AA`, `M1 1AE`, `EH1 1YZ`). BinDay queries the open `postcodes.io` API to extract the local authority administrative district.
 * **Database Matcher**: Matches the district against an embedded dataset of 380+ UK local authorities spanning England, Scotland, Wales, and Northern Ireland.
@@ -12,7 +12,7 @@ This document details the core features and functional mechanics built into **Bi
 
 ---
 
-## 🎨 2. Dual-Colour Wheelie Bins
+## 2. Dual-Colour Wheelie Bins
 
 * **Realistic Wheelie Bin Visualiser**: Wheelie bins are displayed using custom SVG/Canvas composables rendering both the bin body and the bin lid independently.
 * **Curated Preset Swatches**: Includes official UK council bin colours:
@@ -25,7 +25,7 @@ This document details the core features and functional mechanics built into **Bi
 
 ---
 
-## 📅 3. Bank Holiday Schedule Shifts
+## 3. Bank Holiday Schedule Shifts
 
 * **UK Bank Holiday Engine**: Calculates official bank holidays across the UK:
   * New Year's Day (plus substitute days).
@@ -38,7 +38,7 @@ This document details the core features and functional mechanics built into **Bi
 
 ---
 
-## 📆 4. ICS Calendar Export with RRULEs
+## 4. ICS Calendar Export with RRULEs
 
 * **iCalendar RFC 5545 Compliance**: Generates standard `.ics` files compatible with Google Calendar, Apple Calendar, Microsoft Outlook, and native Android Calendar.
 * **Recurrence Rules (RRULE)**: Exports recurring collection schedules with precise iCalendar rules:
@@ -50,7 +50,7 @@ This document details the core features and functional mechanics built into **Bi
 
 ---
 
-## 🔔 5. Notification Engine & Exact Alarms
+## 5. Notification Engine & Exact Alarms
 
 * **Dual-Slot Notification Strategy**:
   * **Evening Before**: 19:00, 20:00, 21:00, or custom time.

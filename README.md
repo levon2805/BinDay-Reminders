@@ -2,51 +2,52 @@
 
 [![Android Version](https://img.shields.io/badge/Android-8.0%2B%20%28API%2026%2B%20to%2035%2B%20--%20Android%2015%29-brightgreen.svg)](https://developer.android.com/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-blue.svg)](https://kotlinlang.org/)
-[![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3%20Expressive-purple.svg)](https://developer.android.com/jetpack/compose)
+[![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3%20Expressive-purple.svg)](https://developer.android.com/)
 [![Tests](https://img.shields.io/badge/Unit%20Tests-113%20Passing-success.svg)](docs/DEVELOPMENT_AND_TESTING.md)
 
-**BinDay: Reminders** is a modern, native Android application designed to ensure UK households never miss a wheelie bin collection day again. Featuring postcode lookup for over 380 UK local councils, dual-colour wheelie bin representations, automatic UK bank holiday schedule shift handling, ICS calendar exports with RRULEs, and high-priority notification alarms.
+**BinDay: Reminders** is a production-grade, native Android application engineered to simplify household waste management across the United Kingdom. Built as a showcase of modern Android software engineering, BinDay features postcode auto-matching for over 380 UK local councils, custom canvas dual-colour wheelie bin visualisations, bank holiday schedule shift handling, iCalendar RFC 5545 exports, and a multi-tiered exact notification engine.
 
 ---
 
-## 🌟 Key Features
+## Executive Summary & Engineering Highlights
 
-* **380+ UK Local Councils & Postcode Matching**: Automatic council detection using the `postcodes.io` API and built-in database of UK local authorities.
-* **Dual-Colour Wheelie Bin Customisation**: Visualise wheelie bins with distinct body and lid colours matching exact council specifications or custom hex colours.
-* **Bank Holiday Shift Engine**: Automatic detection of UK Bank Holidays (including Easter via Meeus/Jones/Butcher algorithm) with automatic schedule shift previews.
-* **ICS Calendar Export**: Export collection timetables directly to Android system calendars or shareable `.ics` files using standard iCalendar RFC 5545 RRULEs.
-* **High-Priority Notification Engine**: Dual-slot reminders (evening before / morning of collection) using exact alarms (`AlarmManager`), `WorkManager` fallback, and interactive notification actions.
-* **Material Design 3 Expressive UI**: Built using 100% Jetpack Compose with adaptive layouts, neo-brutalist card styling, dynamic theme support (Light/Dark/System), and Navigation 3.
-
----
-
-## 🛠️ Tech Stack
-
-* **Language**: [Kotlin](https://kotlinlang.org/) 2.2.10
-* **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material Design 3 Expressive components
-* **Navigation**: [Jetpack Navigation 3](https://developer.android.com/guide/navigation) (`androidx.navigation3`)
-* **Architecture**: Clean Architecture + MVVM + Unidirectional Data Flow (UDF)
-* **Local Persistence**: [Room Database](https://developer.android.com/training/data-storage/room) & [DataStore Preferences](https://developer.android.com/topic/libraries/architecture/datastore)
-* **Networking**: [Retrofit 2](https://square.github.io/retrofit/) & [Moshi](https://github.org/square/moshi)
-* **Background Scheduling**: `AlarmManager`, `WorkManager`, `BroadcastReceiver`
-* **Concurrency**: Kotlin Coroutines & `StateFlow`
-* **Unit Testing**: JUnit 4, Kotlinx Coroutines Test (113 unit tests)
+* **Clean Architecture & Unidirectional Data Flow (UDF)**: Strict architectural boundary decoupling (`UI` -> `Domain Use Cases` -> `Data Repositories`). Reactive state exposed via `StateFlow` leveraging `SharingStarted.WhileSubscribed(5000)` for lifecycle-aware subscription and memory efficiency.
+* **Declarative Jetpack Compose UI**: 100% Jetpack Compose implementation featuring custom Neobrutalist design tokens, dynamic light/dark/system theme support, custom Canvas visual swatches for dual-colour wheelie bins (body & lid), and high-contrast WCAG AA accessibility compliance.
+* **Triple-Layer Notification Engine**: Guarantees precise reminder delivery across all Android power saving states using system `AlarmManager` (`setExactAndAllowWhileIdle`), high-priority `WorkManager` background sync fallbacks, shade-native `NotificationActionReceiver` quick actions, and `BootReceiver` reboot recovery.
+* **Database, Sync & REST API Integration**: Single Source of Truth architecture powered by Room Database with schema migration support (`MIGRATION_1_2` with `fallbackToDestructiveMigration`), DataStore Preferences for reactive state, and REST API integration with `postcodes.io` for 380+ UK local authorities.
+* **KMP-Ready Pure Kotlin Domain Layer**: Zero Android framework dependencies in the domain layer, making business logic, schedule engines, and bank holiday calculation algorithms ready for Kotlin Multiplatform (KMP) iOS code sharing.
+* **Extensive Unit Test Suite**: 113 automated unit tests across 17 test suites covering domain logic, state flows, schedule calculations, receivers, and utilities.
 
 ---
 
-## 📸 App Screenshots
+## Key Features
 
-| Dashboard | Bin Management | Onboarding Wizard | Settings & Reminders |
-| :---: | :---: | :---: | :---: |
-| *Upcoming collection hero banner & timeline* | *Dual-colour wheelie bin list & editor* | *Postcode lookup & council setup* | *Bank holiday previews & notification times* |
-
-*(Screenshots placeholder: Add application screenshots here)*
+* **380+ UK Council Postcode Resolution**: Instant local authority lookup matching UK postcodes via `postcodes.io` and pre-configuring default collection timetables.
+* **Dual-Colour Canvas Wheelie Bins**: Accurate visual representation of bin bodies and lids matching official council specifications or custom hex colours.
+* **Bank Holiday Shift Engine**: Algorithmic detection of UK Bank Holidays (including dynamic Easter calculation via the Meeus/Jones/Butcher algorithm) with automatic 1-day schedule shift previews.
+* **RFC 5545 iCalendar Exports**: Calendar synchronization exporting collection schedules with precise iCalendar `RRULE`s and embedded `VALARM` triggers.
+* **Notification Shade Quick Actions**: Interactive notification shade buttons allowing users to mark bins as put out without launching the application.
 
 ---
 
-## 🏗️ Architecture Overview
+## Tech Stack & Tooling
 
-The application follows strict Clean Architecture principles with Unidirectional Data Flow:
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Language** | Kotlin 2.2.10 | Coroutines, Flow, Sealed Interfaces, Pure Kotlin Domain |
+| **UI Framework** | Jetpack Compose | Material Design 3 Expressive, Neobrutalist Tokens, Custom Canvas |
+| **Navigation** | Jetpack Navigation 3 | Strongly typed `@Serializable` `NavKey` routes (`androidx.navigation3`) |
+| **Architecture** | Clean Architecture + MVVM + UDF | Immutable State Flow, Sealed UI States, Use Case pattern |
+| **Persistence** | Room & DataStore Preferences | SQLite database with migration handling & reactive Key-Value store |
+| **Networking** | Retrofit 2 & Moshi | REST client for postcode district resolution via `postcodes.io` |
+| **Scheduling** | AlarmManager & WorkManager | Triple-layer exact alarm system with reboot receiver recovery |
+| **Testing** | JUnit 4 & Coroutines Test | 113 unit tests across 17 test suites |
+
+---
+
+## Technical Architecture
+
+The application enforces strict separation of concerns across Presentation, Domain, Data, and Engine layers:
 
 ```
 ┌───────────────────────────────────────────────────────────┐
@@ -57,7 +58,7 @@ The application follows strict Clean Architecture principles with Unidirectional
                               ▼
 ┌───────────────────────────────────────────────────────────┐
 │                         DOMAIN                            │
-│                  Pure Kotlin Use Cases                    │
+│           Pure Kotlin Use Cases (KMP Ready)               │
 └─────────────────────────────┬─────────────────────────────┘
                               │
                               ▼
@@ -67,28 +68,31 @@ The application follows strict Clean Architecture principles with Unidirectional
 └───────────────────────────────────────────────────────────┘
 ```
 
-For full architectural details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> [!NOTE]
+> The domain layer contains pure Kotlin models, interfaces, and logic engines with zero Android dependencies, enabling seamless migration to Kotlin Multiplatform (KMP) for cross-platform expansion.
+
+For detailed architectural specifications, database schemas, and data flow diagrams, refer to [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## 📖 Documentation
+## Comprehensive Documentation
 
-Detailed documentation is available in the [`docs/`](docs/) directory:
+Detailed technical documentation is available in the [`docs/`](docs/) directory:
 
-* 🏛️ [Architecture Guide (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md) - Deep dive into Clean Architecture, MVVM, UDF, Repository pattern, and database schemas.
-* ✨ [Features Specification (`docs/FEATURES.md`)](docs/FEATURES.md) - Comprehensive description of council lookup, bank holiday calculations, notification engine, and calendar exports.
-* 🧪 [Development & Testing Guide (`docs/DEVELOPMENT_AND_TESTING.md`)](docs/DEVELOPMENT_AND_TESTING.md) - Instructions for building, running all 113 unit tests, generating debug APKs, and contribution guidelines.
+* [Architecture Guide (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md) - Deep dive into Clean Architecture, MVVM, UDF, Repository pattern, and database schemas.
+* [Features Specification (`docs/FEATURES.md`)](docs/FEATURES.md) - Comprehensive description of council lookup, bank holiday algorithms, notification engines, and calendar exports.
+* [Development & Testing Guide (`docs/DEVELOPMENT_AND_TESTING.md`)](docs/DEVELOPMENT_AND_TESTING.md) - Build instructions, unit test execution, APK generation, and code style guidelines.
 
 ---
 
-## 🚀 Getting Started & Installation
+## Getting Started & Installation
 
 ### Prerequisites
 * **Android Studio**: Ladybug (2024.2.1) or newer
-* **JDK**: Version 17
+* **Java Development Kit (JDK)**: JDK 17
 * **Android SDK**: API level 35/37 (Minimum API level 26 / Android 8.0)
 
-### Building from Source
+### Build Commands
 
 1. **Clone the repository**:
    ```bash
@@ -96,29 +100,29 @@ Detailed documentation is available in the [`docs/`](docs/) directory:
    cd binday
    ```
 
-2. **Build the Debug APK**:
-   ```bash
-   ./gradlew assembleDebug
-   ```
-
-3. **Run Unit Tests**:
+2. **Run Unit Tests**:
    ```bash
    ./gradlew testDebugUnitTest
    ```
 
-4. **Install on Connected Device / Emulator**:
+3. **Build Debug APK**:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+
+4. **Install on Device / Emulator**:
    ```bash
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
 
 ---
 
-## 🤝 Contributing
+## Code Style & Standards
 
-Contributions are welcome! Please ensure all code additions maintain 100% test pass rate, follow idiomatic Kotlin guidelines, and enforce British English spelling (`colour`, `customise`, `behaviour`, `organise`, `programme`, `cancelled`, etc.) in all KDoc and inline comments.
+All code additions must maintain the 113-test pass suite and adhere to British English spelling (`colour`, `customise`, `behaviour`, `organise`, `programme`, `cancelled`) in KDoc and inline comments.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the `LICENSE` file for details.
