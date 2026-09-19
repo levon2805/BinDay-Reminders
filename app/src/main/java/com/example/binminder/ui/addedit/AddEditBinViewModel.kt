@@ -277,6 +277,13 @@ class AddEditBinViewModel(
     }
 
     /**
+     * Resets the save completion flag after navigation has been triggered.
+     */
+    fun resetSaveState() {
+        _uiState.value = _uiState.value.copy(isSaved = false)
+    }
+
+    /**
      * Clears current error message notification string.
      */
     fun clearErrorMessage() {

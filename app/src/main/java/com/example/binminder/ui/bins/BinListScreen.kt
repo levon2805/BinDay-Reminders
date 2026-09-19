@@ -131,40 +131,66 @@ fun BinListScreen(
             textContentColor = MaterialTheme.colorScheme.onSurface,
             title = {
                 Text(
-                    text = "Run Setup Wizard?",
+                    text = "Reset Options",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
-                Text(
-                    text = "This will completely reset your configuration. Are you absolutely sure?",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showResetDialog = false
-                        viewModel.resetTimetableAndAddress(context)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandError, contentColor = Color.White),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    shape = RoundedCornerShape(8.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Run Setup Wizard", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Choose how you want to reset your configuration:",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                    Button(
+                        onClick = {
+                            showResetDialog = false
+                            viewModel.resetTimetableAndAddress(context)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandError, contentColor = Color.White),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Run Setup Wizard", fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = {
+                            showResetDialog = false
+                            viewModel.removeAllBins()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Remove All Bins", fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = { showResetDialog = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             },
-            dismissButton = {
-                Button(
-                    onClick = { showResetDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Cancel", fontWeight = FontWeight.SemiBold)
-                }
-            }
+            confirmButton = {},
+            dismissButton = {}
         )
     }
 
@@ -271,7 +297,7 @@ fun BinListContent(
                             .neoShadow(offset = 4.dp)
                     ) {
                         Text(
-                            text = "Run Setup Wizard",
+                            text = "Reset",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )

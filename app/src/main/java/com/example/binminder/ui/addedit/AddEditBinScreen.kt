@@ -111,6 +111,7 @@ fun AddEditBinScreen(
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
+            viewModel.resetSaveState()
             onNavigateBack()
         }
     }
