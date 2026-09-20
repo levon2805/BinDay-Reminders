@@ -114,7 +114,8 @@ class BinRepositoryImpl(
      */
     override suspend fun ensureDefaultBinsInitialized(): Unit = withContext(Dispatchers.IO) {
         runCatching {
-            if (binDao.getBinCount() == 0) {
+            val isOnboardingCompleted = notificationSettingsDataStore.onboardingCompleted.first()
+            if (!isOnboardingCompleted && binDao.getBinCount() == 0) {
                 val today = LocalDate.now()
                 val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 

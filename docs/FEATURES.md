@@ -71,6 +71,11 @@ This document details the core features and functional mechanics built into **Bi
 * **Date-Scoped Put-Out State Isolation (`"${binId}_${collectionDate}"`)**:
   * Scopes bin put-out status to a composite string key consisting of the unique bin ID and the specific ISO date (`"${binId}_${collectionDate}"`).
   * Guarantees complete isolation across collection dates, ensuring that marking a bin as put out for today's collection date does not affect future recurring collection dates or pollute global state.
+* **Engine Safeguards & Reliability Guardrails**:
+  * **`IS_EXACT_DELIVERY` Flagging**: Prevents random OS `PeriodicWorkRequest` executions from triggering duplicate notifications by explicitly validating alarm sources.
+  * **Blanket WorkManager Cancellation (`BINMINDER_REMINDER_WORK`)**: Tags all reminder background jobs with a unified tag to ensure reliable, global cancellation across the entire app ecosystem when settings change.
+  * **"Double-Check" Security Guard**: Explicitly verifies the `triggeredTime` against active user reminder settings within `NotificationAlarmReceiver` before posting any notification, eliminating stale or ghost alarm firings.
+  * **Strict Default Bin Isolation**: Prevents background workers (like `NotificationWorker`) from inadvertently re-injecting deleted fallback bins during quiet hours by isolating default initialization strictly to onboarding UI flows.
 * **Debounce & Suppress Mechanics**:
   * Maintains a 1-hour anti-spam debounce window using shared preferences to prevent duplicate notification posts between exact alarm triggers and background `WorkManager` runs.
   * Automatically suppresses reminder notifications if all bins scheduled for a collection date have already been marked as put out.

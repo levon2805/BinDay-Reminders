@@ -37,7 +37,6 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                 val dataStore = NotificationSettingsDataStore(appContext)
                 val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
 
-                repository.ensureDefaultBinsInitialized()
 
                 val settings = repository.notificationSettings.first()
                 if (!settings.reminderEnabled) {
@@ -57,7 +56,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                 val activeSet = if (isEvening) settings.eveningReminderTimes else settings.morningReminderTimes
 
                 if (triggeredTime == null || !activeSet.contains(triggeredTime)) {
-                    Log.d(TAG, "Triggered time $triggeredTime ($slotStr) is no longer active in settings ($activeSet). Discarding immediately.")
+                    Log.d(TAG, "Discarding cancelled alarm: Triggered time $triggeredTime ($slotStr) is no longer active in settings ($activeSet).")
                     return@launch
                 }
 

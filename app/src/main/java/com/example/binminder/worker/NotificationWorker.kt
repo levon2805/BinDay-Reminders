@@ -10,6 +10,7 @@ import com.example.binminder.data.repository.BinRepositoryImpl
 import com.example.binminder.engine.ScheduleEngine
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * Background WorkManager worker that checks for upcoming bin collections and triggers notifications.
@@ -31,25 +32,43 @@ class NotificationWorker(
         val dataStore = NotificationSettingsDataStore(appContext)
         val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
 
-        // Ensure defaults are populated if app started in background
-        repository.ensureDefaultBinsInitialized()
 
         val settings = repository.notificationSettings.first()
         if (!settings.reminderEnabled) {
             return Result.success()
         }
 
+        val isExactDelivery = inputData.getBoolean("IS_EXACT_DELIVERY", false)
+        if (!isExactDelivery) {
+            Log.d(TAG, "NotificationWorker invoked without IS_EXACT_DELIVERY flag (likely a periodic/background sync). Rescheduling exact alarms and skipping direct notification posting.")
+            NotificationScheduler.scheduleNotificationWorker(appContext)
+            return Result.success()
+        }
+
         val putOutBins = repository.putOutBins.first()
         val slot = inputData.getString("REMINDER_SLOT")
         val targetDateStr = inputData.getString("TARGET_DATE")
+        val reminderTimeStr = inputData.getString("REMINDER_TIME")
 
         val targetDates = mutableListOf<Pair<LocalDate, Boolean>>() // Pair(targetDate, isEvening)
+
+        val isEveningSlot = slot == "EVENING" || (slot == null && settings.eveningReminderTime != null)
+        val activeSet = if (isEveningSlot) settings.eveningReminderTimes else settings.morningReminderTimes
+        
+        val triggeredTime: LocalTime? = reminderTimeStr?.let {
+            runCatching { LocalTime.parse(it) }.getOrNull()
+        } ?: if (isEveningSlot) settings.eveningReminderTime else settings.morningReminderTime
+
+        if (triggeredTime == null || !activeSet.contains(triggeredTime)) {
+            Log.d(TAG, "Triggered time $triggeredTime ($slot) is no longer active in settings ($activeSet). Discarding WorkManager fallback notification.")
+            NotificationScheduler.scheduleNotificationWorker(appContext)
+            return Result.success()
+        }
 
         if (targetDateStr != null) {
             runCatching {
                 val parsedDate = LocalDate.parse(targetDateStr)
-                val isEvening = slot == "EVENING"
-                targetDates.add(parsedDate to isEvening)
+                targetDates.add(parsedDate to isEveningSlot)
             }
         }
 

@@ -166,11 +166,14 @@ object NotificationScheduler {
                         try {
                             val workData = workDataOf(
                                 "REMINDER_SLOT" to target.slot.name,
-                                "TARGET_DATE" to target.collectionDate.toString()
+                                "TARGET_DATE" to target.collectionDate.toString(),
+                                "REMINDER_TIME" to target.reminderTime?.toString(),
+                                "IS_EXACT_DELIVERY" to true
                             )
                             val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
                                 .setInitialDelay(target.delayMillis + 120_000L, TimeUnit.MILLISECONDS)
                                 .setInputData(workData)
+                                .addTag("BINMINDER_REMINDER_WORK")
                                 .build()
 
                             val timeTag = target.reminderTime?.toString() ?: ""
@@ -425,6 +428,7 @@ object NotificationScheduler {
             }
 
             if (workManager != null) {
+                workManager.cancelAllWorkByTag("BINMINDER_REMINDER_WORK")
                 workManager.cancelUniqueWork(WORK_NAME)
                 workManager.cancelUniqueWork(WORK_NAME_EVENING)
                 workManager.cancelUniqueWork(WORK_NAME_MORNING)

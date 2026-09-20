@@ -565,8 +565,7 @@ fun SettingsContent(
                                 text = extraButtonText,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                textAlign = TextAlign.Center
                             )
                         }
 
@@ -585,31 +584,6 @@ fun SettingsContent(
                                 onDeleteExtraTime = onDeleteExtraTime,
                                 onDismissRequest = { showMultipleRemindersDialog = false }
                             )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Test Notification Button
-                        Button(
-                            onClick = onSendTestNotification,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onSecondary
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.NotificationsActive,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Test Notification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -888,6 +862,61 @@ fun SettingsContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 5: About BinDay
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_app_logo),
+                    contentDescription = "BinDay Logo",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "BinDay",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                Text(
+                    text = "BinDay: Reminders helps you stay on top of your local wheelie bin collection schedule with smart, reliable notifications.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+
+                val versionName = try {
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                } catch (e: Exception) {
+                    "1.0"
+                }
+
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                )
+
+                TextButton(
+                    onClick = onSendTestNotification
+                ) {
+                    Text(
+                        text = "Send Test Notification",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
         }
     }
 

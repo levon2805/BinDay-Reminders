@@ -125,6 +125,13 @@ Handles notification scheduling, exact system alarms, background sync, and notif
 * **`NotificationWorker`**: `WorkManager` background sync task providing secondary redundancy for collection reminders.
 * **`NotificationHelper`**: Constructs notification channels (`IMPORTANCE_HIGH`), builds heads-up notifications with embedded pending intents for action buttons, and maintains a 1-hour anti-spam debounce cache.
 
+#### Notification Engine Reliability Safeguards
+To guarantee robust, zero-false-positive notification delivery, the background layer enforces several critical guardrails:
+* **"Double-Check" Security Guard**: `NotificationAlarmReceiver` evaluates the trigger timestamp (`triggeredTime`) against the live `NotificationSettings` prior to posting. Stale intents or ghost firings are dropped if they do not match an active user slot.
+* **WorkManager Flagging (`IS_EXACT_DELIVERY`)**: Isolates precision `AlarmManager` intents from generic `PeriodicWorkRequest` OS firings, ensuring only strictly validated time windows trigger notifications.
+* **Unified Cancellation Tag (`BINMINDER_REMINDER_WORK`)**: Binds all reminder-related `WorkManager` jobs to a single tag, allowing guaranteed global wipe/cancellation when notification settings are toggled off.
+* **Strict Default Bin Isolation**: Decouples bin initialization from background workers (e.g. `NotificationWorker`). Default fallback bins are injected *only* during active UI onboarding, preventing background tasks from re-injecting deleted bins during Doze state.
+
 ---
 
 ## Reactive Data Flow Architecture
