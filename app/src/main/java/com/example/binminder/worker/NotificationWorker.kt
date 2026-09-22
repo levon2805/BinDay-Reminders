@@ -53,16 +53,20 @@ class NotificationWorker(
         val targetDates = mutableListOf<Pair<LocalDate, Boolean>>() // Pair(targetDate, isEvening)
 
         val isEveningSlot = slot == "EVENING" || (slot == null && settings.eveningReminderTime != null)
-        val activeSet = if (isEveningSlot) settings.eveningReminderTimes else settings.morningReminderTimes
         
         val triggeredTime: LocalTime? = reminderTimeStr?.let {
             runCatching { LocalTime.parse(it) }.getOrNull()
-        } ?: if (isEveningSlot) settings.eveningReminderTime else settings.morningReminderTime
+        }
 
-        if (triggeredTime == null || !activeSet.contains(triggeredTime)) {
-            Log.d(TAG, "Triggered time $triggeredTime ($slot) is no longer active in settings ($activeSet). Discarding WorkManager fallback notification.")
-            NotificationScheduler.scheduleNotificationWorker(appContext)
-            return Result.success()
+        // Only apply the stale-alarm guard when we have an explicit REMINDER_TIME.
+        // Legacy fallback workers (without REMINDER_TIME) should fire if not cancelled.
+        if (triggeredTime != null) {
+            val activeSet = if (isEveningSlot) settings.eveningReminderTimes else settings.morningReminderTimes
+            if (!activeSet.contains(triggeredTime)) {
+                Log.d(TAG, "Triggered time $triggeredTime ($slot) is no longer active in settings ($activeSet). Discarding WorkManager fallback notification.")
+                NotificationScheduler.scheduleNotificationWorker(appContext)
+                return Result.success()
+            }
         }
 
         if (targetDateStr != null) {
@@ -109,12 +113,16 @@ class NotificationWorker(
 
             val content = NotificationHelper.formatNotificationContent(unPutOutEvents, isEvening)
             if (content != null) {
+                // Generate unique notification ID per (date, slot, time) so multiple
+                // reminders for the same date don't overwrite each other or collide in debounce
+                val slotLabel = if (isEvening) "EVENING" else "MORNING"
+                val notificationId = java.util.Objects.hash(targetDate, slotLabel, triggeredTime ?: "legacy") and 0x7FFFFFFF
                 Log.d(TAG, "Posting high-priority reminder notification for $targetDate (${content.binNames})")
                 NotificationHelper.postCollectionReminderNotification(
                     context = appContext,
                     title = content.title,
                     message = content.message,
-                    notificationId = targetDate.hashCode(),
+                    notificationId = notificationId,
                     binIds = content.unPutOutBinIds,
                     binNames = content.binNames,
                     targetDateStr = targetDate.toString()

@@ -51,13 +51,18 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
 
                 val triggeredTime: LocalTime? = reminderTimeStr?.let {
                     runCatching { LocalTime.parse(it) }.getOrNull()
-                } ?: if (isEvening) settings.eveningReminderTime else settings.morningReminderTime
+                }
 
-                val activeSet = if (isEvening) settings.eveningReminderTimes else settings.morningReminderTimes
-
-                if (triggeredTime == null || !activeSet.contains(triggeredTime)) {
-                    Log.d(TAG, "Discarding cancelled alarm: Triggered time $triggeredTime ($slotStr) is no longer active in settings ($activeSet).")
-                    return@launch
+                // Only apply the stale-alarm guard when we have an explicit REMINDER_TIME.
+                // Legacy alarms (without REMINDER_TIME) should fire if they weren't cancelled
+                // by the cancel sweep — using a settings fallback here was unreliable and could
+                // match the wrong time in the active set, or suppress legitimate notifications.
+                if (triggeredTime != null) {
+                    val activeSet = if (isEvening) settings.eveningReminderTimes else settings.morningReminderTimes
+                    if (!activeSet.contains(triggeredTime)) {
+                        Log.d(TAG, "Discarding cancelled alarm: Triggered time $triggeredTime ($slotStr) is no longer active in settings ($activeSet).")
+                        return@launch
+                    }
                 }
 
                 val targetDate = if (targetDateStr != null) {
@@ -79,12 +84,15 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                 if (unPutOutEvents.isNotEmpty()) {
                     val content = NotificationHelper.formatNotificationContent(unPutOutEvents, isEvening)
                     if (content != null) {
+                        // Generate unique notification ID per (date, slot, time) so multiple
+                        // reminders for the same date don't overwrite each other or collide in debounce
+                        val notificationId = java.util.Objects.hash(targetDate, slotStr ?: "EVENING", triggeredTime ?: "legacy") and 0x7FFFFFFF
                         Log.d(TAG, "Posting high-priority heads-up reminder notification for $targetDate (${content.binNames})")
                         NotificationHelper.postCollectionReminderNotification(
                             context = appContext,
                             title = content.title,
                             message = content.message,
-                            notificationId = targetDate.hashCode(),
+                            notificationId = notificationId,
                             binIds = content.unPutOutBinIds,
                             binNames = content.binNames,
                             targetDateStr = targetDate.toString()

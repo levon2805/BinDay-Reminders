@@ -21,11 +21,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.Objects
 import java.util.concurrent.TimeUnit
 
 enum class ReminderSlot {
@@ -57,6 +60,15 @@ object NotificationScheduler {
     const val REQUEST_CODE_MORNING = 2002
 
     private const val TAG = "NotificationScheduler"
+    private const val PREFS_NAME = "notification_scheduler_state"
+    private const val KEY_PREVIOUS_EVENING_TIMES = "prev_evening_times"
+    private const val KEY_PREVIOUS_MORNING_TIMES = "prev_morning_times"
+
+    /**
+     * Mutex to serialize concurrent scheduling calls, preventing race conditions
+     * between cancel and schedule operations from overlapping invocations.
+     */
+    private val schedulingMutex = Mutex()
 
     /**
      * Pure calculation function to determine exact target reminder times and delays in milliseconds
@@ -117,79 +129,86 @@ object NotificationScheduler {
     /**
      * Core scheduling method: recalculates target times and schedules exact alarms,
      * high-priority OneTime WorkManager fallbacks, and daily Periodic WorkManager tasks.
+     *
+     * Serialized via [schedulingMutex] to prevent race conditions from concurrent calls.
      */
     fun scheduleNotificationWorker(context: Context, settings: NotificationSettings? = null) {
         val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val database = AppDatabase.getInstance(appContext)
-                val dataStore = NotificationSettingsDataStore(appContext)
-                val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
+            schedulingMutex.withLock {
+                try {
+                    val database = AppDatabase.getInstance(appContext)
+                    val dataStore = NotificationSettingsDataStore(appContext)
+                    val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
 
-                val currentSettings = settings ?: repository.notificationSettings.first()
-                
-                // Systematically cancel all previous exact alarms and background work tasks first
-                cancelReminder(appContext, currentSettings)
+                    val currentSettings = settings ?: repository.notificationSettings.first()
 
-                if (!currentSettings.reminderEnabled) {
-                    return@launch
-                }
+                    // Cancel all previous exact alarms using both current AND previously-stored times
+                    cancelReminder(appContext, currentSettings)
 
-                val bins = repository.getBinsList().filter { it.isEnabled }
-                if (bins.isEmpty()) {
-                    return@launch
-                }
+                    if (!currentSettings.reminderEnabled) {
+                        // Persist empty times so next cancel knows there's nothing to clean up
+                        savePreviouslyScheduledTimes(appContext, emptySet(), emptySet())
+                        return@withLock
+                    }
 
-                val now = LocalDateTime.now()
-                val targets = calculateNextReminderTargets(bins, currentSettings, now)
+                    val bins = repository.getBinsList().filter { it.isEnabled }
+                    if (bins.isEmpty()) {
+                        savePreviouslyScheduledTimes(appContext, emptySet(), emptySet())
+                        return@withLock
+                    }
 
-                if (targets.isEmpty()) {
-                    return@launch
-                }
+                    val now = LocalDateTime.now()
+                    val targets = calculateNextReminderTargets(bins, currentSettings, now)
 
-                val workManager = try {
-                    WorkManager.getInstance(appContext)
-                } catch (_: Throwable) {
-                    null
-                }
+                    if (targets.isEmpty()) {
+                        savePreviouslyScheduledTimes(appContext, currentSettings.eveningReminderTimes, currentSettings.morningReminderTimes)
+                        return@withLock
+                    }
 
-                for (target in targets) {
-                    // A. Schedule Exact Alarm via AlarmManager
-                    scheduleExactAlarm(appContext, target.slot, target.targetDateTime, target.collectionDate, target.reminderTime)
+                    val workManager = try {
+                        WorkManager.getInstance(appContext)
+                    } catch (_: Throwable) {
+                        null
+                    }
 
-                    // B. Enqueue High-Priority OneTime WorkManager Fallback
-                    if (workManager != null) {
-                        workManager.cancelUniqueWork(WORK_NAME)
-                        workManager.cancelUniqueWork(WORK_NAME_EVENING)
-                        workManager.cancelUniqueWork(WORK_NAME_MORNING)
+                    for (target in targets) {
+                        // A. Schedule Exact Alarm via AlarmManager
+                        scheduleExactAlarm(appContext, target.slot, target.targetDateTime, target.collectionDate, target.reminderTime)
 
-                        try {
-                            val workData = workDataOf(
-                                "REMINDER_SLOT" to target.slot.name,
-                                "TARGET_DATE" to target.collectionDate.toString(),
-                                "REMINDER_TIME" to target.reminderTime?.toString(),
-                                "IS_EXACT_DELIVERY" to true
-                            )
-                            val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                                .setInitialDelay(target.delayMillis + 120_000L, TimeUnit.MILLISECONDS)
-                                .setInputData(workData)
-                                .addTag("BINMINDER_REMINDER_WORK")
-                                .build()
+                        // B. Enqueue High-Priority OneTime WorkManager Fallback
+                        if (workManager != null) {
+                            try {
+                                val workData = workDataOf(
+                                    "REMINDER_SLOT" to target.slot.name,
+                                    "TARGET_DATE" to target.collectionDate.toString(),
+                                    "REMINDER_TIME" to target.reminderTime?.toString(),
+                                    "IS_EXACT_DELIVERY" to true
+                                )
+                                val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                                    .setInitialDelay(target.delayMillis + 120_000L, TimeUnit.MILLISECONDS)
+                                    .setInputData(workData)
+                                    .addTag("BINMINDER_REMINDER_WORK")
+                                    .build()
 
-                            val timeTag = target.reminderTime?.toString() ?: ""
-                            val oneTimeWorkName = "binminder_onetime_${target.slot.name}_${target.collectionDate}_$timeTag"
-                            workManager.enqueueUniqueWork(
-                                oneTimeWorkName,
-                                ExistingWorkPolicy.REPLACE,
-                                oneTimeRequest
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error scheduling fallback OneTimeWorkRequest for ${target.slot}", e)
+                                val timeTag = target.reminderTime?.toString() ?: ""
+                                val oneTimeWorkName = "binminder_onetime_${target.slot.name}_${target.collectionDate}_$timeTag"
+                                workManager.enqueueUniqueWork(
+                                    oneTimeWorkName,
+                                    ExistingWorkPolicy.REPLACE,
+                                    oneTimeRequest
+                                )
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error scheduling fallback OneTimeWorkRequest for ${target.slot}", e)
+                            }
                         }
                     }
+
+                    // Persist currently-scheduled times so they can be cancelled deterministically later
+                    savePreviouslyScheduledTimes(appContext, currentSettings.eveningReminderTimes, currentSettings.morningReminderTimes)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error running scheduleNotificationWorker", e)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error running scheduleNotificationWorker", e)
             }
         }
     }
@@ -201,11 +220,13 @@ object NotificationScheduler {
         scheduleNotificationWorker(context, settings)
     }
 
+    /**
+     * Generates a deterministic, collision-resistant alarm request code for a given
+     * (date, time, slot) combination. Uses [Objects.hash] with positive masking to
+     * avoid overflow-related collisions from the previous arithmetic approach.
+     */
     fun generateAlarmRequestCode(date: LocalDate, time: LocalTime, isMorning: Boolean): Int {
-        val dateHash = date.year * 10000 + date.monthValue * 100 + date.dayOfMonth
-        val timeHash = time.hour * 100 + time.minute
-        val slotFlag = if (isMorning) 1 else 2
-        return (dateHash.hashCode() * 31 + timeHash) * 31 + slotFlag
+        return Objects.hash(date, time, isMorning) and 0x7FFFFFFF
     }
 
     fun canScheduleExactAlarms(context: Context): Boolean {
@@ -279,34 +300,24 @@ object NotificationScheduler {
             if (alarmManager != null) {
                 val currentSettings = settings ?: runBlocking { NotificationSettingsDataStore(appContext).notificationSettings.first() }
 
-                for (time in currentSettings.eveningReminderTimes) {
-                    val requestCode = generateAlarmRequestCode(collectionDate, time, isMorning = false)
-                    val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
-                        action = "com.example.binminder.ACTION_SHOW_REMINDER"
-                    }
-                    val pendingIntent = PendingIntent.getBroadcast(
-                        appContext,
-                        requestCode,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    alarmManager.cancel(pendingIntent)
-                    pendingIntent.cancel()
-                }
+                // Cancel alarms for current settings times AND previously-stored times
+                val allTimesToCancel = buildComprehensiveTimeSet(appContext, currentSettings)
 
-                for (time in currentSettings.morningReminderTimes) {
-                    val requestCode = generateAlarmRequestCode(collectionDate, time, isMorning = true)
-                    val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
-                        action = "com.example.binminder.ACTION_SHOW_REMINDER"
+                for (time in allTimesToCancel) {
+                    for (isMorning in listOf(true, false)) {
+                        val requestCode = generateAlarmRequestCode(collectionDate, time, isMorning)
+                        val intent = Intent(appContext, NotificationAlarmReceiver::class.java).apply {
+                            action = "com.example.binminder.ACTION_SHOW_REMINDER"
+                        }
+                        val pendingIntent = PendingIntent.getBroadcast(
+                            appContext,
+                            requestCode,
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        alarmManager.cancel(pendingIntent)
+                        pendingIntent.cancel()
                     }
-                    val pendingIntent = PendingIntent.getBroadcast(
-                        appContext,
-                        requestCode,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    alarmManager.cancel(pendingIntent)
-                    pendingIntent.cancel()
                 }
 
                 val intentEvening = Intent(appContext, NotificationAlarmReceiver::class.java)
@@ -360,6 +371,9 @@ object NotificationScheduler {
 
     /**
      * Cancels active exact alarms and WorkManager reminder tasks.
+     *
+     * Combines current settings times, previously-stored custom times, and hardcoded defaults
+     * to ensure no orphaned alarms survive after settings changes.
      */
     fun cancelReminder(context: Context, settings: NotificationSettings? = null) {
         try {
@@ -388,16 +402,10 @@ object NotificationScheduler {
                 pendingMorning.cancel()
 
                 // Systematically cancel all dynamic request codes for next 60 days
+                // using current settings, previously-stored custom times, AND hardcoded defaults
                 val startDate = LocalDate.now().minusDays(2)
                 val endDate = startDate.plusDays(60)
-                val timesToCancel = mutableSetOf(
-                    LocalTime.of(18, 0), LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0),
-                    LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0), LocalTime.of(9, 0)
-                )
-                if (settings != null) {
-                    timesToCancel.addAll(settings.eveningReminderTimes)
-                    timesToCancel.addAll(settings.morningReminderTimes)
-                }
+                val timesToCancel = buildComprehensiveTimeSet(appContext, settings)
 
                 var date = startDate
                 while (!date.isAfter(endDate)) {
@@ -437,6 +445,58 @@ object NotificationScheduler {
             }
         } catch (_: Throwable) {
             // Safe fallback for unit tests or uninitialised WorkManager context
+        }
+    }
+
+    /**
+     * Builds a comprehensive set of times to cancel, merging:
+     * 1. Hardcoded default preset times
+     * 2. Current settings times (if provided)
+     * 3. Previously-stored custom times from SharedPreferences
+     *
+     * This ensures that changing from a custom time (e.g. 17:30) to a preset (e.g. 19:00)
+     * will still cancel the old 17:30 alarm, even though it's no longer in current settings.
+     */
+    private fun buildComprehensiveTimeSet(context: Context, settings: NotificationSettings?): Set<LocalTime> {
+        val timesToCancel = mutableSetOf(
+            LocalTime.of(18, 0), LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0),
+            LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0), LocalTime.of(9, 0)
+        )
+        if (settings != null) {
+            timesToCancel.addAll(settings.eveningReminderTimes)
+            timesToCancel.addAll(settings.morningReminderTimes)
+        }
+        // Merge previously-stored custom times so old alarms are cancelled deterministically
+        timesToCancel.addAll(loadPreviouslyScheduledTimes(context))
+        return timesToCancel
+    }
+
+    /**
+     * Persists the currently-scheduled custom reminder times to SharedPreferences,
+     * so they can be retrieved and cancelled on the next scheduling pass even if
+     * the user has since changed or removed them from settings.
+     */
+    private fun savePreviouslyScheduledTimes(context: Context, eveningTimes: Set<LocalTime>, morningTimes: Set<LocalTime>) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putStringSet(KEY_PREVIOUS_EVENING_TIMES, eveningTimes.map { it.toString() }.toSet())
+                .putStringSet(KEY_PREVIOUS_MORNING_TIMES, morningTimes.map { it.toString() }.toSet())
+                .apply()
+        } catch (_: Throwable) {}
+    }
+
+    /**
+     * Loads previously-scheduled custom reminder times from SharedPreferences.
+     */
+    private fun loadPreviouslyScheduledTimes(context: Context): Set<LocalTime> {
+        return try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val eveningStrs = prefs.getStringSet(KEY_PREVIOUS_EVENING_TIMES, emptySet()) ?: emptySet()
+            val morningStrs = prefs.getStringSet(KEY_PREVIOUS_MORNING_TIMES, emptySet()) ?: emptySet()
+            (eveningStrs + morningStrs).mapNotNull { runCatching { LocalTime.parse(it) }.getOrNull() }.toSet()
+        } catch (_: Throwable) {
+            emptySet()
         }
     }
 }

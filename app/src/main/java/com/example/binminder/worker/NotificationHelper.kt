@@ -80,20 +80,20 @@ object NotificationHelper {
         // Prevents the WorkManager fallback from double-posting if the exact AlarmManager already succeeded.
         // It relies on a local timestamp record rather than active system notifications,
         // so it safely catches duplicates even if the user immediately swipes the first one away!
+        // Uses per-notification-key entries so multiple reminders for the same date at different
+        // times (e.g. evening 19:00 and evening 20:00) can each fire independently.
         val prefs = context.getSharedPreferences("notification_debounce", Context.MODE_PRIVATE)
-        val debounceKey = "${notificationId}_$title"
-        val lastKey = prefs.getString("last_key", "")
-        val lastTime = prefs.getLong("last_time", 0L)
+        val debounceKey = "debounce_${notificationId}_$title"
+        val lastTime = prefs.getLong(debounceKey, 0L)
         
         // 9999 is the test notification ID, always allow it through.
         // 1 hour window (3600000ms) to block the duplicate fallback.
-        if (notificationId != 9999 && lastKey == debounceKey && (System.currentTimeMillis() - lastTime) < 3_600_000L) {
+        if (notificationId != 9999 && (System.currentTimeMillis() - lastTime) < 3_600_000L) {
             return
         }
         
         prefs.edit()
-            .putString("last_key", debounceKey)
-            .putLong("last_time", System.currentTimeMillis())
+            .putLong(debounceKey, System.currentTimeMillis())
             .apply()
         // ----------------------------------
 

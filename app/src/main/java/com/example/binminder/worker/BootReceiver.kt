@@ -25,8 +25,7 @@ class BootReceiver : BroadcastReceiver() {
 
         if (action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED ||
-            action == "android.intent.action.QUICKBOOT_POWERON" ||
-            action == Intent.ACTION_LOCKED_BOOT_COMPLETED
+            action == "android.intent.action.QUICKBOOT_POWERON"
         ) {
             Log.d(TAG, "Received boot or package replaced broadcast action: $action. Rescheduling alarms.")
             val pendingResult = goAsync()

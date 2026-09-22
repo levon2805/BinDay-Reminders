@@ -124,9 +124,10 @@ class SettingsViewModel(
             val oldPrimary = currentSettings.primaryEveningTime
             val extraTimes = if (oldPrimary != null) currentSettings.eveningReminderTimes - oldPrimary else currentSettings.eveningReminderTimes
             val updated = if (time == null) {
+                // "None" selected: clear primary AND all advanced/extra evening times
                 currentSettings.copy(
                     primaryEveningTime = null,
-                    eveningReminderTimes = extraTimes
+                    eveningReminderTimes = emptySet()
                 )
             } else {
                 currentSettings.copy(
@@ -153,9 +154,10 @@ class SettingsViewModel(
             val oldPrimary = currentSettings.primaryMorningTime
             val extraTimes = if (oldPrimary != null) currentSettings.morningReminderTimes - oldPrimary else currentSettings.morningReminderTimes
             val updated = if (time == null) {
+                // "None" selected: clear primary AND all advanced/extra morning times
                 currentSettings.copy(
                     primaryMorningTime = null,
-                    morningReminderTimes = extraTimes
+                    morningReminderTimes = emptySet()
                 )
             } else {
                 currentSettings.copy(

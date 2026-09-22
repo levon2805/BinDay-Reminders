@@ -233,8 +233,13 @@ class BinRepositoryImpl(
      * Saves updated notification preferences and reschedules background reminders on [Dispatchers.IO].
      */
     override suspend fun updateNotificationSettings(settings: NotificationSettings): Unit = withContext(Dispatchers.IO) {
+        // Read old settings BEFORE saving new ones so the scheduler can cancel alarms
+        // from the previous configuration (e.g. old custom times the user changed away from)
+        val oldSettings = runCatching { notificationSettingsDataStore.notificationSettings.first() }.getOrNull()
         notificationSettingsDataStore.updateSettings(settings)
         NotificationHelper.clearDebounceCache(applicationContext)
+        // The scheduler's cancelReminder will merge current settings + previously-stored times
+        // from SharedPreferences to catch all old alarms deterministically
         NotificationScheduler.scheduleNotificationWorker(applicationContext, settings)
     }
 
