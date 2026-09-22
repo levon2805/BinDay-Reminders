@@ -279,6 +279,19 @@ class BinRepositoryImpl(
     }
 
     /**
+     * Clears all stored bins, resets onboarding status to incomplete, and cancels scheduled notifications on [Dispatchers.IO].
+     */
+    override suspend fun resetTimetableAndAddress(context: Context?): Unit = withContext(Dispatchers.IO) {
+        val currentTheme = themeMode.first()
+        clearAllBins()
+        setOnboardingCompleted(false)
+        setThemeMode(currentTheme)
+        if (context != null) {
+            NotificationScheduler.cancelReminder(context)
+        }
+    }
+
+    /**
      * Configures initial bins and preferences based on user choices during onboarding on [Dispatchers.IO].
      */
     override suspend fun completeOnboardingSetup(

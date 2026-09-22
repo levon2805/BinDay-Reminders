@@ -29,12 +29,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -95,6 +96,7 @@ fun DashboardScreen(
     onNavigateToAddBin: () -> Unit,
     onNavigateToBinDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onRunSetupWizard: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -115,6 +117,7 @@ fun DashboardScreen(
         onNavigateToAddBin = onNavigateToAddBin,
         onNavigateToBinDetail = onNavigateToBinDetail,
         onNavigateToSettings = onNavigateToSettings,
+        onRunSetupWizard = onRunSetupWizard,
         modifier = modifier
     )
 }
@@ -131,6 +134,7 @@ fun DashboardContent(
     onNavigateToAddBin: () -> Unit,
     onNavigateToBinDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onRunSetupWizard: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showCalendarExportDialog by remember { mutableStateOf(false) }
@@ -203,7 +207,7 @@ fun DashboardContent(
                 )
             } else if (uiState.nextCollectionEvents.isEmpty()) {
                 EmptyScheduleView(
-                    onAddBinClicked = onNavigateToAddBin,
+                    onRunSetupWizardClicked = onRunSetupWizard,
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
@@ -765,7 +769,7 @@ fun UpcomingEventCard(
  */
 @Composable
 fun EmptyScheduleView(
-    onAddBinClicked: () -> Unit,
+    onRunSetupWizardClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -773,27 +777,17 @@ fun EmptyScheduleView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .neoShadow(offset = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Delete,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.Outlined.Delete,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(80.dp)
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "No Scheduled Collections",
+            text = "No Bins Configured",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -802,29 +796,36 @@ fun EmptyScheduleView(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Add your council bin schedules to see upcoming collections.",
+            text = "Run the setup wizard to get started.",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = onAddBinClicked,
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier
-                .height(56.dp)
-                .neoShadow(offset = 6.dp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = "Add a Bin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Button(
+                onClick = onRunSetupWizardClicked,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .neoShadow(offset = 6.dp)
+            ) {
+                Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Run Setup Wizard", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -886,7 +887,8 @@ fun DashboardScreenPreview() {
             onMarkBinPutOut = { _, _, _ -> },
             onNavigateToAddBin = {},
             onNavigateToBinDetail = {},
-            onNavigateToSettings = {}
+            onNavigateToSettings = {},
+            onRunSetupWizard = {}
         )
     }
 }

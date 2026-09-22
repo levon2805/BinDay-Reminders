@@ -39,7 +39,8 @@ class ViewModelFactory(
                     DashboardViewModel(
                         repository = appContainer.binRepository,
                         getUpcomingCollectionsUseCase = appContainer.getUpcomingCollectionsUseCase,
-                        toggleBinPutOutUseCase = appContainer.toggleBinPutOutUseCase
+                        toggleBinPutOutUseCase = appContainer.toggleBinPutOutUseCase,
+                        resetTimetableUseCase = appContainer.resetTimetableUseCase
                     ) as T
                 }
                 modelClass.isAssignableFrom(BinListViewModel::class.java) ||

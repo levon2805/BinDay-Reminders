@@ -110,7 +110,8 @@ import java.time.format.DateTimeFormatter
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier,
-    onReRunSetupWizard: () -> Unit = {}
+    onRunSetupWizard: () -> Unit = {},
+    onReRunSetupWizard: () -> Unit = onRunSetupWizard
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -188,9 +189,7 @@ fun SettingsScreen(
             }
         },
         onResetAndStartSetup = {
-            viewModel.resetTimetableAndAddress(context) {
-                onReRunSetupWizard()
-            }
+            onReRunSetupWizard()
         },
         modifier = modifier
     )
