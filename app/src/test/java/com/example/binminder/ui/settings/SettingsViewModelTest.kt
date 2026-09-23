@@ -216,7 +216,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testSelectingNonePrimaryPreservesExtraTimes() = runTest {
+    fun testSelectingNonePrimaryClearsEveningTimes() = runTest {
         val extraTime = LocalTime.of(21, 0)
         viewModel.addExtraReminderTime(extraTime)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -226,7 +226,7 @@ class SettingsViewModelTest {
 
         assertNull(fakeRepository.notificationSettingsState.primaryEveningTime)
         assertNull(fakeRepository.notificationSettingsState.eveningReminderTime)
-        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(extraTime))
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.isEmpty())
     }
 
     @Test

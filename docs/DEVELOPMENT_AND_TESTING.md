@@ -1,6 +1,6 @@
 # Development & Testing Guide
 
-This guide provides instructions for setting up the development environment, running unit and instrumented tests, building debug APKs, and adhering to codebase conventions.
+This guide provides instructions for setting up the development environment, running unit and instrumented tests, building debug APKs, and adhering to codebase conventions for **BinDay: Reminders**.
 
 ---
 
@@ -39,7 +39,7 @@ Output APK location:
 
 ## Unit Testing
 
-BinDay features an expanded automated unit test suite comprising **139 unit tests passing across 18 test suites** covering all domain use cases, ViewModels, schedule engines, bank holiday algorithms, data repositories, workers, notification receivers, and date/time utilities.
+BinDay features a comprehensive automated unit test suite comprising **139 unit tests passing across 18 test suites** covering all domain use cases, ViewModels, schedule engines, bank holiday algorithms, data repositories, workers, notification receivers, and date/time utilities.
 
 ### Running Unit Tests
 
@@ -65,7 +65,7 @@ The unit tests are located in `app/src/test/java/com/example/binminder/`:
 | `ToggleBinPutOutUseCaseTest` | Marking bin put out, string set formatting, date-scoped composite key toggling |
 | `BankHolidayCalculatorTest` | Easter calculation (Meeus/Jones/Butcher), UK bank holiday dates, shifts |
 | `ScheduleEngineTest` | Weekly, fortnightly, monthly schedule calculations, start week offsets |
-| `AddEditBinViewModelTest` | Bin creation/editing, color swatch selection, input validation |
+| `AddEditBinViewModelTest` | Bin creation/editing, colour swatch selection, input validation |
 | `BinListViewModelTest` | Bin listing, enable/disable toggle, deletion flow |
 | `DashboardViewModelTest` | Upcoming collections UI state, hero banner, mark put out actions |
 | `OnboardingViewModelTest` | Multi-step wizard flow, postcode validation, schedule setup, multiple reminders sub-menu |

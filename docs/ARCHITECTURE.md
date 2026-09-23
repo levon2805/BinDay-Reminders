@@ -1,6 +1,6 @@
 # Architecture Overview & Technical Design
 
-**BinDay: Reminders** is built following strict **Clean Architecture** principles, **MVVM (Model-View-ViewModel)** presentation pattern, and **Unidirectional Data Flow (UDF)**. This architectural separation ensures testability, maintainability, and clear boundary enforcement across layers.
+**BinDay: Reminders** is built following strict **Clean Architecture** principles, the **MVVM (Model-View-ViewModel)** presentation pattern, and **Unidirectional Data Flow (UDF)**. This architectural separation ensures testability, maintainability, and clear boundary enforcement across layers.
 
 ---
 
@@ -36,7 +36,7 @@
 
 ### 1. Presentation Layer (`com.example.binminder.ui`)
 
-The presentation layer is fully declarative, relying on **Jetpack Compose** with Material Design 3 Expressive components.
+The presentation layer is fully declarative, relying on **Jetpack Compose** with Material Design 3 Expressive components and custom Eco-Sleek design tokens.
 
 * **Navigation**: Managed via Jetpack Navigation 3 (`androidx.navigation3`). Routes are strongly typed using `@Serializable` target objects implementing `NavKey` (`Screen.Dashboard`, `Screen.BinList`, `Screen.AddEditBin`, `Screen.Settings`, `Screen.Onboarding`).
 * **ViewModels**: State owners exposing `StateFlow<UiState>` to UI components. UI events are passed back to ViewModels via explicit function calls.
@@ -46,13 +46,14 @@ The presentation layer is fully declarative, relying on **Jetpack Compose** with
   3. User interactions trigger callbacks on the **ViewModel**.
   4. The **ViewModel** updates state or executes domain use cases.
 * **Advanced Notification UI (`MultipleRemindersDialog`)**: Interactive dialog composable integrated into Onboarding and Settings screens for configuring custom Day Before and Day Of reminder times with in-place addition, editing, and deletion.
+* **System 12h/24h Clock Support**: Automatic detection of system clock preferences (`DateFormat.is24HourFormat`), dynamically rendering 12-hour or 24-hour time formatting across all screens and dialogs.
 
 #### ViewModels in BinDay
 * `DashboardViewModel`: Manages upcoming collection events, hero banner state, bank holiday shift warnings, and marking bins as put out.
 * `BinListViewModel`: Manages the complete list of configured bins, enable/disable toggles, deletion dialogs, and manual reset workflows.
 * `AddEditBinViewModel`: Handles adding new bins or editing existing ones, including custom body/lid colour selections.
 * `SettingsViewModel`: Controls notification settings (evening/morning reminder times, multiple reminder slots), theme selection (Light/Dark/System), and bank holiday shift previews.
-* `OnboardingViewModel`: Manages the multi-step setup wizard (Postcode lookup -> Council selection -> Schedule configuration -> Confirmation).
+* `OnboardingViewModel`: Manages the multi-step setup wizard (Postcode lookup -> Council selection -> Schedule configuration -> Multiple Reminders -> Confirmation).
 
 ---
 
@@ -74,12 +75,12 @@ The data layer implements data storage, remote API communication, and repository
 #### Repositories
 * `BinRepository`: Interface declaring reactive access to bins, notification preferences, theme modes, onboarding state, and the reactive put-out state flow `putOutBins: Flow<Set<String>>` (also accessed via reactive flows `getPutOutBinsFlow()`).
 * `BinRepositoryImpl`: Single Source of Truth implementation coordinating Room DAO (`BinDao`), DataStore (`NotificationSettingsDataStore`), and background schedulers.
-* `CouncilLookupRepository`: Interface providing postcode resolution and council schedule matching.
+* `CouncilLookupRepository`: Interface providing postcode resolution and council schedule matching across 380+ UK local authorities.
 
 #### Data Sources & Local Storage
 * **Room Database (`AppDatabase`, `BinDao`, `BinEntity`)**:
   * Stores bin configurations (`id`, `name`, `presetColor`, `colorHex`, `lidPresetColor`, `lidColorHex`, `scheduleDay`, `recurrence`, `startNextWeek`, `isEnabled`, `customNote`, `adjustForBankHolidays`).
-  * Database migration handling (e.g. Migration 1->2 adding dual-colour lid columns `lidColorHex` and `lidPresetColor`).
+  * Database migration handling (`MIGRATION_1_2` adding dual-colour lid columns `lidColorHex` and `lidPresetColor`).
 * **DataStore Preferences (`NotificationSettingsDataStore`)**:
   * Stores user preferences (`reminderEnabled`, `eveningReminderTime`, `morningReminderTime`, `eveningReminderTimes`, `morningReminderTimes`, `putOutBins` string set, `onboardingCompleted`, `councilName`, `postcode`, `themeMode`).
   * Stores `putOutBins` as a set of date-scoped composite keys (`"${binId}_${collectionDate}"`).
