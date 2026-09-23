@@ -25,7 +25,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
+
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.AlertDialog
@@ -90,11 +90,11 @@ fun BinListScreen(
     viewModel: BinListViewModel,
     onNavigateToAddBin: () -> Unit,
     onNavigateToEditBin: (Long) -> Unit,
+    onRunSetupWizard: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
     var showBankHolidayInfoDialog by remember { mutableStateOf(false) }
 
@@ -112,7 +112,7 @@ fun BinListScreen(
         onRequestDeleteBin = { viewModel.requestDeleteBin(it) },
         onCancelDeleteBin = { viewModel.cancelDeleteBin() },
         onConfirmDeleteBin = { viewModel.confirmDeleteBin() },
-        onRunSetupWizard = { viewModel.resetTimetableAndAddress(context) },
+        onRunSetupWizard = onRunSetupWizard,
         onResetClick = { showResetDialog = true },
         onShowBankHolidayInfo = { showBankHolidayInfoDialog = true },
         onNavigateToAddBin = onNavigateToAddBin,
@@ -147,7 +147,7 @@ fun BinListScreen(
                     Button(
                         onClick = {
                             showResetDialog = false
-                            viewModel.resetTimetableAndAddress(context)
+                            onRunSetupWizard()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BrandError, contentColor = Color.White),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -647,22 +647,12 @@ fun EmptyBinsView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .neoShadow(offset = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Delete,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.Outlined.Delete,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(80.dp)
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 

@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,7 +35,6 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EventRepeat
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Notifications
@@ -91,10 +92,12 @@ import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
 import com.example.binminder.ui.dialogs.CalendarExportDialog
+import com.example.binminder.ui.dialogs.MultipleRemindersDialog
 import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.neoShadow
 import com.example.binminder.ui.theme.BrandError
 import androidx.compose.ui.graphics.Color
+import com.example.binminder.util.formatTimeForUser
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -107,7 +110,8 @@ import java.time.format.DateTimeFormatter
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier,
-    onReRunSetupWizard: () -> Unit = {}
+    onRunSetupWizard: () -> Unit = {},
+    onReRunSetupWizard: () -> Unit = onRunSetupWizard
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -168,6 +172,14 @@ fun SettingsScreen(
         },
         onUpdateEveningTime = { time -> viewModel.updateEveningReminderTime(time) },
         onUpdateMorningTime = { time -> viewModel.updateMorningReminderTime(time) },
+        onAddExtraTime = { time -> viewModel.addExtraReminderTime(time) },
+        onDeleteExtraTime = { time -> viewModel.removeExtraReminderTime(time) },
+        onAddEveningTime = { time -> viewModel.addEveningReminderTime(time) },
+        onEditEveningTime = { oldTime, newTime -> viewModel.editEveningReminderTime(oldTime, newTime) },
+        onDeleteEveningTime = { time -> viewModel.removeEveningReminderTime(time) },
+        onAddMorningTime = { time -> viewModel.addMorningReminderTime(time) },
+        onEditMorningTime = { oldTime, newTime -> viewModel.editMorningReminderTime(oldTime, newTime) },
+        onDeleteMorningTime = { time -> viewModel.removeMorningReminderTime(time) },
         onUpdateSchedule = { time, eveningBefore ->
             viewModel.updateReminderSchedule(time, eveningBefore)
         },
@@ -177,9 +189,7 @@ fun SettingsScreen(
             }
         },
         onResetAndStartSetup = {
-            viewModel.resetTimetableAndAddress(context) {
-                onReRunSetupWizard()
-            }
+            onReRunSetupWizard()
         },
         modifier = modifier
     )
@@ -197,6 +207,14 @@ fun SettingsContent(
     onToggleReminders: (Boolean) -> Unit,
     onUpdateEveningTime: (LocalTime?) -> Unit,
     onUpdateMorningTime: (LocalTime?) -> Unit,
+    onAddExtraTime: (LocalTime) -> Unit = {},
+    onDeleteExtraTime: (LocalTime) -> Unit = {},
+    onAddEveningTime: (LocalTime) -> Unit = {},
+    onEditEveningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteEveningTime: (LocalTime) -> Unit = {},
+    onAddMorningTime: (LocalTime) -> Unit = {},
+    onEditMorningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteMorningTime: (LocalTime) -> Unit = {},
     onUpdateSchedule: (LocalTime, Boolean) -> Unit = { _, _ -> },
     onSendTestNotification: () -> Unit,
     onResetAndStartSetup: () -> Unit,
@@ -210,6 +228,7 @@ fun SettingsContent(
     var isBankHolidaysExpanded by remember { mutableStateOf(false) }
     var showSubstituteHolidayInfoDialog by remember { mutableStateOf(false) }
     var showCalendarExportDialog by remember { mutableStateOf(false) }
+    var showMultipleRemindersDialog by remember { mutableStateOf(false) }
 
     if (showCalendarExportDialog) {
         CalendarExportDialog(
@@ -330,11 +349,17 @@ fun SettingsContent(
                             color = MaterialTheme.colorScheme.primary
                         )
 
+                        val primaryEvening = settings.eveningReminderTime
+                        val primaryMorning = settings.morningReminderTime
+                        val extraEveningTimes = if (primaryEvening != null) settings.eveningReminderTimes - primaryEvening else settings.eveningReminderTimes
+                        val extraMorningTimes = if (primaryMorning != null) settings.morningReminderTimes - primaryMorning else settings.morningReminderTimes
+                        val extraTimes = (extraEveningTimes + extraMorningTimes).toList().sorted()
+
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Preset Schedule Options: Evening Before
+                        // Preset Schedule Options: Day Before
                         Text(
-                            text = "Evening Before",
+                            text = "Day Before",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -345,7 +370,7 @@ fun SettingsContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val isEveningNone = settings.eveningReminderTime == null
+                            val isEveningNone = primaryEvening == null
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isEveningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -364,11 +389,12 @@ fun SettingsContent(
                             }
 
                             listOf(
-                                LocalTime.of(19, 0) to "19:00",
-                                LocalTime.of(20, 0) to "20:00",
-                                LocalTime.of(21, 0) to "21:00"
-                            ).forEach { (time, label) ->
-                                val isSelected = settings.eveningReminderTime == time
+                                LocalTime.of(19, 0),
+                                LocalTime.of(20, 0),
+                                LocalTime.of(21, 0)
+                            ).forEach { time ->
+                                val label = formatTimeForUser(time, context)
+                                val isSelected = primaryEvening == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -387,13 +413,13 @@ fun SettingsContent(
                                 }
                             }
 
-                            val isEveningCustom = settings.eveningReminderTime != null && settings.eveningReminderTime !in listOf(
+                            val isEveningCustom = primaryEvening != null && primaryEvening !in listOf(
                                 LocalTime.of(19, 0),
                                 LocalTime.of(20, 0),
                                 LocalTime.of(21, 0)
                             )
-                            val customEveningLabel = if (isEveningCustom) {
-                                "Custom (${settings.eveningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                            val customEveningLabel = if (isEveningCustom && primaryEvening != null) {
+                                "Custom (${formatTimeForUser(primaryEvening, context)})"
                             } else {
                                 "Custom..."
                             }
@@ -421,9 +447,9 @@ fun SettingsContent(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Preset Schedule Options: Morning Of
+                        // Preset Schedule Options: Day Of
                         Text(
-                            text = "Morning Of",
+                            text = "Day Of",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -434,7 +460,7 @@ fun SettingsContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val isMorningNone = settings.morningReminderTime == null
+                            val isMorningNone = primaryMorning == null
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isMorningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -453,11 +479,12 @@ fun SettingsContent(
                             }
 
                             listOf(
-                                LocalTime.of(6, 0) to "06:00",
-                                LocalTime.of(7, 0) to "07:00",
-                                LocalTime.of(8, 0) to "08:00"
-                            ).forEach { (time, label) ->
-                                val isSelected = settings.morningReminderTime == time
+                                LocalTime.of(6, 0),
+                                LocalTime.of(7, 0),
+                                LocalTime.of(8, 0)
+                            ).forEach { time ->
+                                val label = formatTimeForUser(time, context)
+                                val isSelected = primaryMorning == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -476,13 +503,13 @@ fun SettingsContent(
                                 }
                             }
 
-                            val isMorningCustom = settings.morningReminderTime != null && settings.morningReminderTime !in listOf(
+                            val isMorningCustom = primaryMorning != null && primaryMorning !in listOf(
                                 LocalTime.of(6, 0),
                                 LocalTime.of(7, 0),
                                 LocalTime.of(8, 0)
                             )
-                            val customMorningLabel = if (isMorningCustom) {
-                                "Custom (${settings.morningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})"
+                            val customMorningLabel = if (isMorningCustom && primaryMorning != null) {
+                                "Custom (${formatTimeForUser(primaryMorning, context)})"
                             } else {
                                 "Custom..."
                             }
@@ -508,29 +535,54 @@ fun SettingsContent(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                        // Test Notification Button
+                        val totalRemindersCount = (settings.eveningReminderTimes + settings.morningReminderTimes).size
+                        val extraButtonText = if (totalRemindersCount > 0) "Advanced Notifications ($totalRemindersCount)" else "Advanced Notifications"
+
                         Button(
-                            onClick = onSendTestNotification,
+                            onClick = { showMultipleRemindersDialog = true },
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onSecondary
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                             ),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
-                                .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 4.dp)
+                                .heightIn(min = 48.dp)
+                                .neoShadow(offset = 2.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.NotificationsActive,
                                 contentDescription = null,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Test Notification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = extraButtonText,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        if (showMultipleRemindersDialog) {
+                            MultipleRemindersDialog(
+                                eveningReminderTimes = settings.eveningReminderTimes,
+                                morningReminderTimes = settings.morningReminderTimes,
+                                onAddEveningTime = onAddEveningTime,
+                                onEditEveningTime = onEditEveningTime,
+                                onDeleteEveningTime = onDeleteEveningTime,
+                                onAddMorningTime = onAddMorningTime,
+                                onEditMorningTime = onEditMorningTime,
+                                onDeleteMorningTime = onDeleteMorningTime,
+                                extraTimes = extraTimes,
+                                onAddExtraTime = onAddExtraTime,
+                                onDeleteExtraTime = onDeleteExtraTime,
+                                onDismissRequest = { showMultipleRemindersDialog = false }
+                            )
                         }
                     }
                 }
@@ -809,6 +861,61 @@ fun SettingsContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 5: About BinDay
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_app_logo),
+                    contentDescription = "BinDay Logo",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "BinDay",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                Text(
+                    text = "BinDay: Reminders helps you stay on top of your local wheelie bin collection schedule with smart, reliable notifications.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+
+                val versionName = try {
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                } catch (e: Exception) {
+                    "1.0"
+                }
+
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                )
+
+                TextButton(
+                    onClick = onSendTestNotification
+                ) {
+                    Text(
+                        text = "Send Test Notification",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
         }
     }
 

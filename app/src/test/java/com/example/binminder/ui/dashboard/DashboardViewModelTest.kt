@@ -9,6 +9,7 @@ import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.GetUpcomingCollectionsUseCase
+import com.example.binminder.domain.ResetTimetableUseCase
 import com.example.binminder.domain.ToggleBinPutOutUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,6 +45,7 @@ class DashboardViewModelTest {
             repository = fakeRepository,
             getUpcomingCollectionsUseCase = GetUpcomingCollectionsUseCase(fakeRepository),
             toggleBinPutOutUseCase = ToggleBinPutOutUseCase(),
+            resetTimetableUseCase = ResetTimetableUseCase(fakeRepository),
             started = SharingStarted.Eagerly
         )
     }

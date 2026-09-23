@@ -114,7 +114,8 @@ class BinRepositoryImpl(
      */
     override suspend fun ensureDefaultBinsInitialized(): Unit = withContext(Dispatchers.IO) {
         runCatching {
-            if (binDao.getBinCount() == 0) {
+            val isOnboardingCompleted = notificationSettingsDataStore.onboardingCompleted.first()
+            if (!isOnboardingCompleted && binDao.getBinCount() == 0) {
                 val today = LocalDate.now()
                 val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
@@ -232,8 +233,13 @@ class BinRepositoryImpl(
      * Saves updated notification preferences and reschedules background reminders on [Dispatchers.IO].
      */
     override suspend fun updateNotificationSettings(settings: NotificationSettings): Unit = withContext(Dispatchers.IO) {
+        // Read old settings BEFORE saving new ones so the scheduler can cancel alarms
+        // from the previous configuration (e.g. old custom times the user changed away from)
+        val oldSettings = runCatching { notificationSettingsDataStore.notificationSettings.first() }.getOrNull()
         notificationSettingsDataStore.updateSettings(settings)
         NotificationHelper.clearDebounceCache(applicationContext)
+        // The scheduler's cancelReminder will merge current settings + previously-stored times
+        // from SharedPreferences to catch all old alarms deterministically
         NotificationScheduler.scheduleNotificationWorker(applicationContext, settings)
     }
 
@@ -275,6 +281,19 @@ class BinRepositoryImpl(
      */
     override suspend fun setOnboardingCompleted(completed: Boolean): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setOnboardingCompleted(completed)
+    }
+
+    /**
+     * Clears all stored bins, resets onboarding status to incomplete, and cancels scheduled notifications on [Dispatchers.IO].
+     */
+    override suspend fun resetTimetableAndAddress(context: Context?): Unit = withContext(Dispatchers.IO) {
+        val currentTheme = themeMode.first()
+        clearAllBins()
+        setOnboardingCompleted(false)
+        setThemeMode(currentTheme)
+        if (context != null) {
+            NotificationScheduler.cancelReminder(context)
+        }
     }
 
     /**

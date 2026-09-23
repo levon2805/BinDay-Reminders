@@ -31,7 +31,7 @@ data class AddEditBinUiState(
     val recurrence: RecurrenceType = RecurrenceType.FORTNIGHTLY,
     val startDate: LocalDate = LocalDate.now(),
     val adjustForBankHolidays: Boolean = true,
-    val customNote: String = "",
+    val customNote: String = getDefaultNotes("", BinColor.BLACK, null),
     val isEnabled: Boolean = true,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
@@ -57,9 +57,9 @@ class AddEditBinViewModel(
      */
     fun loadBin(id: Long?) {
         if (id == null || id == 0L) {
-            _uiState.value = AddEditBinUiState(
-                customNote = getDefaultNotes("", BinColor.BLACK, null)
-            )
+            if (_uiState.value.binId != null) {
+                _uiState.value = AddEditBinUiState()
+            }
             return
         }
 

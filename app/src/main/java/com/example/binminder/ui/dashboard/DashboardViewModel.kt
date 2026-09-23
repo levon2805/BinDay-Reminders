@@ -7,6 +7,7 @@ import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.data.repository.BinRepository
 import com.example.binminder.domain.GetUpcomingCollectionsUseCase
+import com.example.binminder.domain.ResetTimetableUseCase
 import com.example.binminder.domain.ToggleBinPutOutUseCase
 import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,7 @@ class DashboardViewModel(
     private val repository: BinRepository,
     getUpcomingCollectionsUseCase: GetUpcomingCollectionsUseCase = GetUpcomingCollectionsUseCase(repository),
     private val toggleBinPutOutUseCase: ToggleBinPutOutUseCase = ToggleBinPutOutUseCase(),
+    private val resetTimetableUseCase: ResetTimetableUseCase,
     started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
@@ -149,5 +151,15 @@ class DashboardViewModel(
      */
     fun dismissUserMessage() {
         _userMessage.value = null
+    }
+
+    /**
+     * Clears saved bins and resets onboarding state for setup wizard re-run via [ResetTimetableUseCase].
+     */
+    fun resetTimetableAndAddress(context: Context, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            resetTimetableUseCase(context)
+            onComplete()
+        }
     }
 }

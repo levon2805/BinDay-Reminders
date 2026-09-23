@@ -1,11 +1,13 @@
 package com.example.binminder.data.repository
 
+import android.content.Context
 import com.example.binminder.data.model.AppThemeMode
 import com.example.binminder.data.model.Bin
 import com.example.binminder.data.model.CollectionEvent
 import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.data.model.OnboardingBinSetup
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -104,6 +106,16 @@ interface BinRepository {
      * Updates the onboarding completion status flag.
      */
     suspend fun setOnboardingCompleted(completed: Boolean)
+
+    /**
+     * Clears all stored bins, resets onboarding status to incomplete, and cancels scheduled notifications.
+     */
+    suspend fun resetTimetableAndAddress(context: Context? = null) {
+        val currentTheme = themeMode.first()
+        clearAllBins()
+        setOnboardingCompleted(false)
+        setThemeMode(currentTheme)
+    }
 
     /**
      * Saves user onboarding choices, sets up default bins, and marks setup as finished.

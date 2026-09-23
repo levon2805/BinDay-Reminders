@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.binminder.MainActivity
 import com.example.binminder.R
+import com.example.binminder.data.model.CollectionEvent
 
 /**
  * Helper object for building and posting high-priority heads-up bin collection system notifications.
@@ -79,20 +80,20 @@ object NotificationHelper {
         // Prevents the WorkManager fallback from double-posting if the exact AlarmManager already succeeded.
         // It relies on a local timestamp record rather than active system notifications,
         // so it safely catches duplicates even if the user immediately swipes the first one away!
+        // Uses per-notification-key entries so multiple reminders for the same date at different
+        // times (e.g. evening 19:00 and evening 20:00) can each fire independently.
         val prefs = context.getSharedPreferences("notification_debounce", Context.MODE_PRIVATE)
-        val debounceKey = "${notificationId}_$title"
-        val lastKey = prefs.getString("last_key", "")
-        val lastTime = prefs.getLong("last_time", 0L)
+        val debounceKey = "debounce_${notificationId}_$title"
+        val lastTime = prefs.getLong(debounceKey, 0L)
         
         // 9999 is the test notification ID, always allow it through.
         // 1 hour window (3600000ms) to block the duplicate fallback.
-        if (notificationId != 9999 && lastKey == debounceKey && (System.currentTimeMillis() - lastTime) < 3_600_000L) {
+        if (notificationId != 9999 && (System.currentTimeMillis() - lastTime) < 3_600_000L) {
             return
         }
         
         prefs.edit()
-            .putString("last_key", debounceKey)
-            .putLong("last_time", System.currentTimeMillis())
+            .putLong(debounceKey, System.currentTimeMillis())
             .apply()
         // ----------------------------------
 
@@ -110,7 +111,7 @@ object NotificationHelper {
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_app_logo)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -169,5 +170,57 @@ object NotificationHelper {
             .edit()
             .clear()
             .apply()
+    }
+
+    /**
+     * Data class holding formatted notification title, message, bin names, and un-put-out bin IDs.
+     */
+    data class NotificationContent(
+        val title: String,
+        val message: String,
+        val binNames: String,
+        val unPutOutBinIds: List<Long>
+    )
+
+    /**
+     * Formats notification title, message, bin names, and bin IDs strictly for un-put-out collection events.
+     * Returns null if no un-put-out events exist.
+     */
+    fun formatNotificationContent(
+        unPutOutEvents: List<CollectionEvent>,
+        isEvening: Boolean
+    ): NotificationContent? {
+        if (unPutOutEvents.isEmpty()) return null
+
+        val binNamesList = unPutOutEvents.map { it.binName }
+        val binNames = when (binNamesList.size) {
+            0 -> return null
+            1 -> binNamesList.first()
+            2 -> "${binNamesList[0]} and ${binNamesList[1]}"
+            else -> {
+                val allButLast = binNamesList.dropLast(1).joinToString(", ")
+                "$allButLast and ${binNamesList.last()}"
+            }
+        }
+
+        val title = if (isEvening) {
+            "Tomorrow's Bin Collection"
+        } else {
+            "Today's Bin Collection"
+        }
+
+        val isPlural = unPutOutEvents.size > 1
+        val message = if (isPlural) {
+            "Please remember to put out your $binNames bins."
+        } else {
+            "Please remember to put out your $binNames bin."
+        }
+
+        return NotificationContent(
+            title = title,
+            message = message,
+            binNames = binNames,
+            unPutOutBinIds = unPutOutEvents.map { it.binId }
+        )
     }
 }

@@ -48,7 +48,9 @@ import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.neoShadow
 import com.example.binminder.util.CalendarExportUtils
+import com.example.binminder.util.formatTimeForUser
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -115,8 +117,9 @@ fun CalendarExportDialog(
                         items(activeBins, key = { it.id }) { bin ->
                             val nextDate = CalendarExportUtils.calculateNextCollectionDate(bin)
                             val formattedDate = nextDate.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK))
+                            val formattedTime = formatTimeForUser(LocalTime.of(7, 0), context)
                             val recurrenceLabel = bin.recurrence.displayName
-                            val subtitle = "Next: $formattedDate ($recurrenceLabel)"
+                            val subtitle = "Next: $formattedDate at $formattedTime ($recurrenceLabel)"
 
                             Surface(
                                 onClick = {

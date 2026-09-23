@@ -22,11 +22,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,6 +88,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -96,16 +99,17 @@ import com.example.binminder.data.model.BinColor
 import com.example.binminder.data.model.CouncilScheduleResult
 import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
+import com.example.binminder.ui.dialogs.MultipleRemindersDialog
 import com.example.binminder.ui.theme.BinMinderTheme
 import com.example.binminder.ui.theme.ColorPickerDialog
 import com.example.binminder.ui.theme.WheelieBinVisualSwatch
 import com.example.binminder.ui.theme.getContrastingTextColor
 import com.example.binminder.ui.theme.parseBinColor
 import com.example.binminder.ui.theme.neoShadow
+import com.example.binminder.util.formatTimeForUser
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.TextStyle
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -146,6 +150,14 @@ fun OnboardingScreen(
         onRenameBin = { binType, newName -> viewModel.renameBin(binType, newName) },
         onUpdateEveningTime = { viewModel.updateEveningReminderTime(it) },
         onUpdateMorningTime = { viewModel.updateMorningReminderTime(it) },
+        onAddExtraTime = { viewModel.addExtraReminderTime(it) },
+        onDeleteExtraTime = { viewModel.removeExtraReminderTime(it) },
+        onAddEveningTime = { viewModel.addEveningReminderTime(it) },
+        onEditEveningTime = { oldTime, newTime -> viewModel.editEveningReminderTime(oldTime, newTime) },
+        onDeleteEveningTime = { viewModel.removeEveningReminderTime(it) },
+        onAddMorningTime = { viewModel.addMorningReminderTime(it) },
+        onEditMorningTime = { oldTime, newTime -> viewModel.editMorningReminderTime(oldTime, newTime) },
+        onDeleteMorningTime = { viewModel.removeMorningReminderTime(it) },
         onReminderEnabledChange = { viewModel.setReminderEnabled(it) },
         onNextStep = { viewModel.nextStep() },
         onPreviousStep = { viewModel.previousStep() },
@@ -190,6 +202,14 @@ fun OnboardingContent(
     onRenameBin: (String, String) -> Unit,
     onUpdateEveningTime: (LocalTime?) -> Unit,
     onUpdateMorningTime: (LocalTime?) -> Unit,
+    onAddExtraTime: (LocalTime) -> Unit = {},
+    onDeleteExtraTime: (LocalTime) -> Unit = {},
+    onAddEveningTime: (LocalTime) -> Unit = {},
+    onEditEveningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteEveningTime: (LocalTime) -> Unit = {},
+    onAddMorningTime: (LocalTime) -> Unit = {},
+    onEditMorningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteMorningTime: (LocalTime) -> Unit = {},
     onReminderEnabledChange: (Boolean) -> Unit,
     onNextStep: () -> Unit,
     onPreviousStep: () -> Unit,
@@ -390,11 +410,19 @@ fun OnboardingContent(
                         onRenameBin = onRenameBin
                     )
                     4 -> Step4RemindersContent(
-                        eveningReminderTime = uiState.eveningReminderTime,
-                        morningReminderTime = uiState.morningReminderTime,
+                        eveningReminderTimes = uiState.eveningReminderTimes,
+                        morningReminderTimes = uiState.morningReminderTimes,
                         reminderEnabled = uiState.reminderEnabled,
                         onUpdateEveningTime = onUpdateEveningTime,
                         onUpdateMorningTime = onUpdateMorningTime,
+                        onAddExtraTime = onAddExtraTime,
+                        onDeleteExtraTime = onDeleteExtraTime,
+                        onAddEveningTime = onAddEveningTime,
+                        onEditEveningTime = onEditEveningTime,
+                        onDeleteEveningTime = onDeleteEveningTime,
+                        onAddMorningTime = onAddMorningTime,
+                        onEditMorningTime = onEditMorningTime,
+                        onDeleteMorningTime = onDeleteMorningTime,
                         onReminderEnabledChange = onReminderEnabledChange
                     )
                 }
@@ -1341,15 +1369,31 @@ fun Step3BinsContent(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun Step4RemindersContent(
-    eveningReminderTime: LocalTime?,
-    morningReminderTime: LocalTime?,
+    eveningReminderTimes: Set<LocalTime>,
+    morningReminderTimes: Set<LocalTime>,
     reminderEnabled: Boolean,
     onUpdateEveningTime: (LocalTime?) -> Unit,
     onUpdateMorningTime: (LocalTime?) -> Unit,
+    onAddExtraTime: (LocalTime) -> Unit = {},
+    onDeleteExtraTime: (LocalTime) -> Unit = {},
+    onAddEveningTime: (LocalTime) -> Unit = {},
+    onEditEveningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteEveningTime: (LocalTime) -> Unit = {},
+    onAddMorningTime: (LocalTime) -> Unit = {},
+    onEditMorningTime: (LocalTime, LocalTime) -> Unit = { _, _ -> },
+    onDeleteMorningTime: (LocalTime) -> Unit = {},
     onReminderEnabledChange: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var isEveningCustomTime by remember { mutableStateOf(true) }
+    var showMultipleRemindersDialog by remember { mutableStateOf(false) }
+
+    val primaryEvening = eveningReminderTimes.firstOrNull()
+    val primaryMorning = morningReminderTimes.firstOrNull()
+    val extraEveningTimes = if (primaryEvening != null) eveningReminderTimes - primaryEvening else eveningReminderTimes
+    val extraMorningTimes = if (primaryMorning != null) morningReminderTimes - primaryMorning else morningReminderTimes
+    val extraTimes = (extraEveningTimes + extraMorningTimes).toList().sorted()
 
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -1434,7 +1478,7 @@ fun Step4RemindersContent(
                 if (reminderEnabled) {
                     Column {
                         Text(
-                            text = "Evening Before",
+                            text = "Day Before",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -1446,7 +1490,7 @@ fun Step4RemindersContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val isEveningNone = eveningReminderTime == null
+                            val isEveningNone = primaryEvening == null
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isEveningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1465,11 +1509,12 @@ fun Step4RemindersContent(
                             }
 
                             listOf(
-                                LocalTime.of(19, 0) to "19:00",
-                                LocalTime.of(20, 0) to "20:00",
-                                LocalTime.of(21, 0) to "21:00"
-                            ).forEach { (time, label) ->
-                                val isSelected = eveningReminderTime == time
+                                LocalTime.of(19, 0),
+                                LocalTime.of(20, 0),
+                                LocalTime.of(21, 0)
+                            ).forEach { time ->
+                                val label = formatTimeForUser(time, context)
+                                val isSelected = primaryEvening == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1488,7 +1533,17 @@ fun Step4RemindersContent(
                                 }
                             }
 
-                            val isEveningCustom = eveningReminderTime != null && eveningReminderTime !in listOf(LocalTime.of(19, 0), LocalTime.of(20, 0), LocalTime.of(21, 0))
+                            val isEveningCustom = primaryEvening != null && primaryEvening !in listOf(
+                                LocalTime.of(19, 0),
+                                LocalTime.of(20, 0),
+                                LocalTime.of(21, 0)
+                            )
+                            val customEveningLabel = if (isEveningCustom && primaryEvening != null) {
+                                "Custom (${formatTimeForUser(primaryEvening, context)})"
+                            } else {
+                                "Custom..."
+                            }
+
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isEveningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1502,7 +1557,7 @@ fun Step4RemindersContent(
                                     .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isEveningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = if (isEveningCustom) "Custom (${eveningReminderTime.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
+                                    text = customEveningLabel,
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -1513,7 +1568,7 @@ fun Step4RemindersContent(
 
                     Column {
                         Text(
-                            text = "Morning Of",
+                            text = "Day Of",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -1525,7 +1580,7 @@ fun Step4RemindersContent(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val isMorningNone = morningReminderTime == null
+                            val isMorningNone = primaryMorning == null
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isMorningNone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1544,11 +1599,12 @@ fun Step4RemindersContent(
                             }
 
                             listOf(
-                                LocalTime.of(6, 0) to "06:00",
-                                LocalTime.of(7, 0) to "07:00",
-                                LocalTime.of(8, 0) to "08:00"
-                            ).forEach { (time, label) ->
-                                val isSelected = morningReminderTime == time
+                                LocalTime.of(6, 0),
+                                LocalTime.of(7, 0),
+                                LocalTime.of(8, 0)
+                            ).forEach { time ->
+                                val label = formatTimeForUser(time, context)
+                                val isSelected = primaryMorning == time
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1567,7 +1623,17 @@ fun Step4RemindersContent(
                                 }
                             }
 
-                            val isMorningCustom = morningReminderTime != null && morningReminderTime !in listOf(LocalTime.of(6, 0), LocalTime.of(7, 0), LocalTime.of(8, 0))
+                            val isMorningCustom = primaryMorning != null && primaryMorning !in listOf(
+                                LocalTime.of(6, 0),
+                                LocalTime.of(7, 0),
+                                LocalTime.of(8, 0)
+                            )
+                            val customMorningLabel = if (isMorningCustom && primaryMorning != null) {
+                                "Custom (${formatTimeForUser(primaryMorning, context)})"
+                            } else {
+                                "Custom..."
+                            }
+
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isMorningCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1581,7 +1647,7 @@ fun Step4RemindersContent(
                                     .neoShadow(color = MaterialTheme.colorScheme.outline, offset = if (isMorningCustom) 0.dp else 4.dp)
                             ) {
                                 Text(
-                                    text = if (isMorningCustom) "Custom (${morningReminderTime?.format(DateTimeFormatter.ofPattern("HH:mm"))})" else "Custom...",
+                                    text = customMorningLabel,
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -1589,13 +1655,63 @@ fun Step4RemindersContent(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val totalRemindersCount = (eveningReminderTimes + morningReminderTimes).size
+                    val extraButtonText = if (totalRemindersCount > 0) "Advanced Notifications ($totalRemindersCount)" else "Advanced Notifications"
+
+                    Button(
+                        onClick = { showMultipleRemindersDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .neoShadow(color = MaterialTheme.colorScheme.outline, offset = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Notifications,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = extraButtonText,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    if (showMultipleRemindersDialog) {
+                        MultipleRemindersDialog(
+                            eveningReminderTimes = eveningReminderTimes,
+                            morningReminderTimes = morningReminderTimes,
+                            onAddEveningTime = onAddEveningTime,
+                            onEditEveningTime = onEditEveningTime,
+                            onDeleteEveningTime = onDeleteEveningTime,
+                            onAddMorningTime = onAddMorningTime,
+                            onEditMorningTime = onEditMorningTime,
+                            onDeleteMorningTime = onDeleteMorningTime,
+                            extraTimes = extraTimes,
+                            onAddExtraTime = onAddExtraTime,
+                            onDeleteExtraTime = onDeleteExtraTime,
+                            onDismissRequest = { showMultipleRemindersDialog = false }
+                        )
+                    }
                 }
             }
         }
     }
 
     if (showTimePickerDialog) {
-        val initialTime = if (isEveningCustomTime) (eveningReminderTime ?: LocalTime.of(19, 0)) else (morningReminderTime ?: LocalTime.of(7, 0))
+        val initialTime = if (isEveningCustomTime) (eveningReminderTimes.firstOrNull() ?: LocalTime.of(19, 0)) else (morningReminderTimes.firstOrNull() ?: LocalTime.of(7, 0))
         val timePickerState = rememberTimePickerState(
             initialHour = initialTime.hour,
             initialMinute = initialTime.minute,

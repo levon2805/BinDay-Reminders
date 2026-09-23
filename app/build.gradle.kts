@@ -93,3 +93,21 @@ dependencies {
     "ksp"(libs.androidx.room.compiler)
     "ksp"(libs.moshi.kotlin.codegen)
 }
+
+// WORKAROUND: The system PATH environment variable on this machine contains an unmatched quote (").
+// When Gradle spawns the Test worker, it passes the java.library.path property, which inherits this quote.
+// This breaks Java's command line parsing on Windows and causes "Could not find or load main class VS".
+// Stripping the quote from the Daemon's java.library.path prevents the issue.
+val jlp = System.getProperty("java.library.path")
+if (jlp != null && jlp.contains("\"")) {
+    System.setProperty("java.library.path", jlp.replace("\"", ""))
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+
+

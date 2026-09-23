@@ -292,14 +292,79 @@ class OnboardingViewModelTest {
     fun testEveningAndMorningReminderTimeUpdates() {
         val eveningTime = LocalTime.of(20, 0)
         viewModel.updateEveningReminderTime(eveningTime)
-        assertEquals(eveningTime, viewModel.uiState.value.eveningReminderTime)
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(eveningTime))
 
         val morningTime = LocalTime.of(7, 30)
         viewModel.updateMorningReminderTime(morningTime)
-        assertEquals(morningTime, viewModel.uiState.value.morningReminderTime)
+        assertTrue(viewModel.uiState.value.morningReminderTimes.contains(morningTime))
 
         viewModel.setReminderEnabled(false)
         assertFalse(viewModel.uiState.value.reminderEnabled)
+    }
+
+    @Test
+    fun testAddAndRemoveExtraReminderTimesInOnboarding() {
+        val extraEvening = LocalTime.of(20, 15)
+        viewModel.addExtraReminderTime(extraEvening)
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
+
+        val extraMorning = LocalTime.of(8, 30)
+        viewModel.addExtraReminderTime(extraMorning)
+        assertTrue(viewModel.uiState.value.morningReminderTimes.contains(extraMorning))
+
+        viewModel.removeExtraReminderTime(extraEvening)
+        assertFalse(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
+    }
+
+    @Test
+    fun testSelectingNonePrimaryPreservesExtraTimesInOnboarding() {
+        val extraEvening = LocalTime.of(21, 0)
+        viewModel.addExtraReminderTime(extraEvening)
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
+
+        viewModel.updateEveningReminderTime(null)
+        assertNull(viewModel.uiState.value.primaryEveningTime)
+        assertNull(viewModel.uiState.value.eveningReminderTime)
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
+    }
+
+    @Test
+    fun testAddEveningAndMorningReminderTimesInOnboarding() {
+        val eveningTime = LocalTime.of(18, 30)
+        viewModel.addEveningReminderTime(eveningTime)
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(eveningTime))
+
+        val morningTime = LocalTime.of(8, 15)
+        viewModel.addMorningReminderTime(morningTime)
+        assertTrue(viewModel.uiState.value.morningReminderTimes.contains(morningTime))
+    }
+
+    @Test
+    fun testEditEveningAndMorningReminderTimesInPlaceInOnboarding() {
+        val oldEvening = LocalTime.of(19, 0)
+        val newEvening = LocalTime.of(20, 0)
+        viewModel.editEveningReminderTime(oldEvening, newEvening)
+
+        assertFalse(viewModel.uiState.value.eveningReminderTimes.contains(oldEvening))
+        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(newEvening))
+
+        val oldMorning = LocalTime.of(7, 0)
+        val newMorning = LocalTime.of(6, 30)
+        viewModel.editMorningReminderTime(oldMorning, newMorning)
+
+        assertFalse(viewModel.uiState.value.morningReminderTimes.contains(oldMorning))
+        assertTrue(viewModel.uiState.value.morningReminderTimes.contains(newMorning))
+    }
+
+    @Test
+    fun testRemoveEveningAndMorningReminderTimesInOnboarding() {
+        val eveningTime = LocalTime.of(19, 0)
+        viewModel.removeEveningReminderTime(eveningTime)
+        assertFalse(viewModel.uiState.value.eveningReminderTimes.contains(eveningTime))
+
+        val morningTime = LocalTime.of(7, 0)
+        viewModel.removeMorningReminderTime(morningTime)
+        assertFalse(viewModel.uiState.value.morningReminderTimes.contains(morningTime))
     }
 
     @Test

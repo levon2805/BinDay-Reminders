@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -96,7 +97,7 @@ class SettingsViewModelTest {
         viewModel.updateEveningReminderTime(newTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(newTime, fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(newTime))
         assertTrue(viewModel.uiState.value.userMessage!!.contains("21:00"))
     }
 
@@ -106,20 +107,126 @@ class SettingsViewModelTest {
         viewModel.updateEveningReminderTime(customEveningTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(customEveningTime, fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(customEveningTime))
         assertTrue(viewModel.uiState.value.userMessage!!.contains("19:30"))
 
         val customMorningTime = LocalTime.of(6, 45)
         viewModel.updateMorningReminderTime(customMorningTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(customMorningTime, fakeRepository.notificationSettingsState.morningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.morningReminderTimes.contains(customMorningTime))
         assertTrue(viewModel.uiState.value.userMessage!!.contains("06:45"))
 
         viewModel.updateEveningReminderTime(null)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(null, fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.isEmpty())
         assertEquals("Evening reminder disabled.", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun testAddAndRemoveExtraReminderTime() = runTest {
+        val extraEvening = LocalTime.of(20, 30)
+        viewModel.addExtraReminderTime(extraEvening)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(extraEvening))
+        assertEquals("Extra reminder added for 20:30.", viewModel.uiState.value.userMessage)
+
+        val extraMorning = LocalTime.of(8, 15)
+        viewModel.addExtraReminderTime(extraMorning)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(fakeRepository.notificationSettingsState.morningReminderTimes.contains(extraMorning))
+        assertEquals("Extra reminder added for 08:15.", viewModel.uiState.value.userMessage)
+
+        viewModel.removeExtraReminderTime(extraEvening)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(extraEvening))
+        assertEquals("Extra reminder removed.", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun testAddEveningAndMorningReminderTimes() = runTest {
+        val eveningTime = LocalTime.of(18, 30)
+        viewModel.addEveningReminderTime(eveningTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(eveningTime))
+        assertEquals("Day Before reminder added for 18:30.", viewModel.uiState.value.userMessage)
+
+        val morningTime = LocalTime.of(8, 0)
+        viewModel.addMorningReminderTime(morningTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(fakeRepository.notificationSettingsState.morningReminderTimes.contains(morningTime))
+        assertEquals("Day Of reminder added for 08:00.", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun testEditEveningAndMorningReminderTimesInPlace() = runTest {
+        val oldEvening = LocalTime.of(19, 0)
+        val newEvening = LocalTime.of(19, 30)
+        viewModel.editEveningReminderTime(oldEvening, newEvening)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(oldEvening))
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(newEvening))
+        assertEquals("Day Before reminder updated to 19:30.", viewModel.uiState.value.userMessage)
+
+        val oldMorning = LocalTime.of(7, 0)
+        val newMorning = LocalTime.of(7, 15)
+        viewModel.editMorningReminderTime(oldMorning, newMorning)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(fakeRepository.notificationSettingsState.morningReminderTimes.contains(oldMorning))
+        assertTrue(fakeRepository.notificationSettingsState.morningReminderTimes.contains(newMorning))
+        assertEquals("Day Of reminder updated to 07:15.", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun testRemoveEveningAndMorningReminderTimes() = runTest {
+        val eveningTime = LocalTime.of(19, 0)
+        viewModel.removeEveningReminderTime(eveningTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(eveningTime))
+        assertEquals("Day Before reminder removed.", viewModel.uiState.value.userMessage)
+
+        val morningTime = LocalTime.of(7, 0)
+        viewModel.removeMorningReminderTime(morningTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(fakeRepository.notificationSettingsState.morningReminderTimes.contains(morningTime))
+        assertEquals("Day Of reminder removed.", viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun testUpdatePrimaryTimePreservesExtraTimes() = runTest {
+        val extraTime = LocalTime.of(21, 0)
+        viewModel.addExtraReminderTime(extraTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val newPrimary = LocalTime.of(20, 0)
+        viewModel.updateEveningReminderTime(newPrimary)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(newPrimary, fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.contains(extraTime))
+    }
+
+    @Test
+    fun testSelectingNonePrimaryClearsEveningTimes() = runTest {
+        val extraTime = LocalTime.of(21, 0)
+        viewModel.addExtraReminderTime(extraTime)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.updateEveningReminderTime(null)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(fakeRepository.notificationSettingsState.primaryEveningTime)
+        assertNull(fakeRepository.notificationSettingsState.eveningReminderTime)
+        assertTrue(fakeRepository.notificationSettingsState.eveningReminderTimes.isEmpty())
     }
 
     @Test

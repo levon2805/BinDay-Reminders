@@ -14,6 +14,9 @@ local.properties
 
 # IDE / Android Studio workspace files
 .idea/
+.idea/workspace.xml
+.idea/deploymentTargetSelector.xml
+.idea/caches/
 *.iml
 .navigation/
 .externalNativeBuild/
@@ -26,3 +29,9 @@ Thumbs.db
 # Agent & Workspace artifacts
 .artifacts/
 .agent/
+
+# Debug log files, local IDE crash logs, or test output files
+*.log
+debug.log
+hs_err_pid*.log
+.gradle/daemon/*/daemon-*.out.log
