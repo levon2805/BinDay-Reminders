@@ -16,6 +16,7 @@ import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -55,37 +56,54 @@ class SettingsViewModel(
 
     private val _userMessage = MutableStateFlow<String?>(null)
 
+    private val heavyUiState = combine(
+        repository.notificationSettings,
+        repository.themeMode,
+        repository.allBins
+    ) { settings, themeMode, bins ->
+        try {
+            val previews = generateBankHolidayShiftPreviews(bins)
+            val activeBins = bins.filter { it.isEnabled }
+            val allEvents = ScheduleEngine.generateCollectionEvents(
+                bins = activeBins,
+                startDate = LocalDate.now(),
+                endDate = LocalDate.now().plusWeeks(6)
+            )
+            val nextDate = allEvents.minOfOrNull { it.collectionDate }
+            val nextEvents = if (nextDate != null) {
+                allEvents.filter { it.collectionDate == nextDate }
+            } else emptyList()
+
+            SettingsUiState(
+                notificationSettings = settings,
+                themeMode = themeMode,
+                bankHolidayPreviews = previews,
+                nextCollectionDate = nextDate,
+                nextCollectionEvents = nextEvents,
+                allBins = bins,
+                isLoading = false
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            SettingsUiState(
+                notificationSettings = settings,
+                themeMode = themeMode,
+                isLoading = false
+            )
+        }
+    }.catch { e ->
+        e.printStackTrace()
+        emit(SettingsUiState(isLoading = false))
+    }
+
     /**
      * Observable flow of the settings UI state.
      */
     val uiState: StateFlow<SettingsUiState> = combine(
-        repository.notificationSettings,
-        repository.themeMode,
-        repository.allBins,
+        heavyUiState,
         _userMessage
-    ) { settings, themeMode, bins, userMessage ->
-        val previews = generateBankHolidayShiftPreviews(bins)
-        val activeBins = bins.filter { it.isEnabled }
-        val allEvents = ScheduleEngine.generateCollectionEvents(
-            bins = activeBins,
-            startDate = LocalDate.now(),
-            endDate = LocalDate.now().plusWeeks(6)
-        )
-        val nextDate = allEvents.minOfOrNull { it.collectionDate }
-        val nextEvents = if (nextDate != null) {
-            allEvents.filter { it.collectionDate == nextDate }
-        } else emptyList()
-
-        SettingsUiState(
-            notificationSettings = settings,
-            themeMode = themeMode,
-            bankHolidayPreviews = previews,
-            nextCollectionDate = nextDate,
-            nextCollectionEvents = nextEvents,
-            allBins = bins,
-            isLoading = false,
-            userMessage = userMessage
-        )
+    ) { state, userMessage ->
+        state.copy(userMessage = userMessage)
     }.stateIn(
         scope = viewModelScope,
         started = started,

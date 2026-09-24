@@ -391,7 +391,7 @@ class OnboardingViewModel(
             if (time == null) {
                 state.copy(
                     primaryEveningTime = null,
-                    eveningReminderTimes = extraTimes
+                    eveningReminderTimes = emptySet()
                 )
             } else {
                 state.copy(
@@ -412,7 +412,7 @@ class OnboardingViewModel(
             if (time == null) {
                 state.copy(
                     primaryMorningTime = null,
-                    morningReminderTimes = extraTimes
+                    morningReminderTimes = emptySet()
                 )
             } else {
                 state.copy(

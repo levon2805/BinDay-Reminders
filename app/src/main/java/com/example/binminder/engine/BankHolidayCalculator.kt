@@ -102,8 +102,8 @@ object BankHolidayCalculator {
                 list.add(BankHolidayInfo("Boxing Day (Substitute)", LocalDate.of(year, 12, 28)))
             }
             DayOfWeek.SUNDAY -> {
+                list.add(BankHolidayInfo("Boxing Day", LocalDate.of(year, 12, 26)))
                 list.add(BankHolidayInfo("Christmas Day (Substitute)", LocalDate.of(year, 12, 27)))
-                list.add(BankHolidayInfo("Boxing Day (Substitute)", LocalDate.of(year, 12, 28)))
             }
             DayOfWeek.FRIDAY -> {
                 list.add(BankHolidayInfo("Christmas Day", christmasDay))
@@ -168,10 +168,9 @@ object BankHolidayCalculator {
             return Pair(scheduledDate, false)
         }
 
-        val earliestBankHoliday = bankHolidaysInWeek.first()
-        if (!scheduledDate.isBefore(earliestBankHoliday)) {
-            // Scheduled collection falls on or after the bank holiday in that week: shift +1 day
-            return Pair(scheduledDate.plusDays(1), true)
+        val relevantHolidays = bankHolidaysInWeek.count { !scheduledDate.isBefore(it) }
+        if (relevantHolidays > 0) {
+            return Pair(scheduledDate.plusDays(relevantHolidays.toLong()), true)
         }
 
         return Pair(scheduledDate, false)

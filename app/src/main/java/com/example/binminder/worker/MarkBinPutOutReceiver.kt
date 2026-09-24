@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.example.binminder.BinMinderApplication
 import com.example.binminder.data.local.AppDatabase
 import com.example.binminder.data.local.NotificationSettingsDataStore
 import com.example.binminder.data.repository.BinRepositoryImpl
@@ -31,9 +32,12 @@ class MarkBinPutOutReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val database = AppDatabase.getInstance(appContext)
-                val dataStore = NotificationSettingsDataStore(appContext)
-                val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
+                val repository = (appContext as? BinMinderApplication)?.container?.binRepository
+                    ?: run {
+                        val database = AppDatabase.getInstance(appContext)
+                        val dataStore = NotificationSettingsDataStore(appContext)
+                        BinRepositoryImpl(database.binDao(), dataStore, appContext)
+                    }
                 val toggleUseCase = ToggleBinPutOutUseCase()
                 
                 val targetDate = runCatching { LocalDate.parse(targetDateStr) }.getOrNull() ?: return@launch

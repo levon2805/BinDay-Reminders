@@ -18,18 +18,19 @@ import com.example.binminder.data.repository.BinRepositoryImpl
 import com.example.binminder.engine.ScheduleEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Objects
 import java.util.concurrent.TimeUnit
+import com.example.binminder.BinMinderApplication
 
 enum class ReminderSlot {
     EVENING,
@@ -70,6 +71,8 @@ object NotificationScheduler {
      */
     private val schedulingMutex = Mutex()
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /**
      * Pure calculation function to determine exact target reminder times and delays in milliseconds
      * for upcoming bin collections based on user settings.
@@ -102,7 +105,7 @@ object NotificationScheduler {
                 val eveningTargetDate = collectionDate.minusDays(1)
                 val eveningTargetDateTime = LocalDateTime.of(eveningTargetDate, time)
                 if (!eveningTargetDateTime.isBefore(pastCutoff)) {
-                    val rawDelayMillis = Duration.between(now, eveningTargetDateTime).toMillis()
+                    val rawDelayMillis = eveningTargetDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                     val delayMillis = maxOf(1000L, rawDelayMillis)
                     targets.add(ReminderTarget(ReminderSlot.EVENING, eveningTargetDateTime, collectionDate, delayMillis, time))
                 }
@@ -112,7 +115,7 @@ object NotificationScheduler {
             for (time in settings.morningReminderTimes) {
                 val morningTargetDateTime = LocalDateTime.of(collectionDate, time)
                 if (!morningTargetDateTime.isBefore(pastCutoff)) {
-                    val rawDelayMillis = Duration.between(now, morningTargetDateTime).toMillis()
+                    val rawDelayMillis = morningTargetDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                     val delayMillis = maxOf(1000L, rawDelayMillis)
                     targets.add(ReminderTarget(ReminderSlot.MORNING, morningTargetDateTime, collectionDate, delayMillis, time))
                 }
@@ -134,12 +137,21 @@ object NotificationScheduler {
      */
     fun scheduleNotificationWorker(context: Context, settings: NotificationSettings? = null) {
         val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
+            scheduleNotificationWorkerSuspend(appContext, settings)
+        }
+    }
+
+    suspend fun scheduleNotificationWorkerSuspend(context: Context, settings: NotificationSettings? = null) {
+        val appContext = context.applicationContext
             schedulingMutex.withLock {
                 try {
-                    val database = AppDatabase.getInstance(appContext)
-                    val dataStore = NotificationSettingsDataStore(appContext)
-                    val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
+                    val repository = (appContext as? BinMinderApplication)?.container?.binRepository
+                        ?: run {
+                            val database = AppDatabase.getInstance(appContext)
+                            val dataStore = NotificationSettingsDataStore(appContext)
+                            BinRepositoryImpl(database.binDao(), dataStore, appContext)
+                        }
 
                     val currentSettings = settings ?: repository.notificationSettings.first()
 
@@ -207,10 +219,9 @@ object NotificationScheduler {
                     // Persist currently-scheduled times so they can be cancelled deterministically later
                     savePreviouslyScheduledTimes(appContext, currentSettings.eveningReminderTimes, currentSettings.morningReminderTimes)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error running scheduleNotificationWorker", e)
+                    Log.e(TAG, "Error running scheduleNotificationWorkerSuspend", e)
                 }
             }
-        }
     }
 
     /**
@@ -293,12 +304,13 @@ object NotificationScheduler {
     /**
      * Cancels exact alarms and WorkManager tasks for a specific collection date when bins are put out.
      */
-    fun cancelAlarmsForCollectionDate(context: Context, collectionDate: LocalDate, settings: NotificationSettings? = null) {
+    suspend fun cancelAlarmsForCollectionDate(context: Context, collectionDate: LocalDate, settings: NotificationSettings? = null) {
         try {
             val appContext = context.applicationContext
             val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             if (alarmManager != null) {
-                val currentSettings = settings ?: runBlocking { NotificationSettingsDataStore(appContext).notificationSettings.first() }
+                val repository = (appContext as? BinMinderApplication)?.container?.binRepository
+                val currentSettings = settings ?: repository?.notificationSettings?.first() ?: NotificationSettingsDataStore(appContext).notificationSettings.first()
 
                 // Cancel alarms for current settings times AND previously-stored times
                 val allTimesToCancel = buildComprehensiveTimeSet(appContext, currentSettings)
