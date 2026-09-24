@@ -8,6 +8,7 @@ import com.example.binminder.data.local.AppDatabase
 import com.example.binminder.data.local.NotificationSettingsDataStore
 import com.example.binminder.data.repository.BinRepositoryImpl
 import com.example.binminder.engine.ScheduleEngine
+import com.example.binminder.BinMinderApplication
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
@@ -28,9 +29,12 @@ class NotificationWorker(
      * Executes background collection checks and triggers reminders when bins are due.
      */
     override suspend fun doWork(): Result {
-        val database = AppDatabase.getInstance(appContext)
-        val dataStore = NotificationSettingsDataStore(appContext)
-        val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
+        val repository = (appContext as? BinMinderApplication)?.container?.binRepository
+            ?: run {
+                val database = AppDatabase.getInstance(appContext)
+                val dataStore = NotificationSettingsDataStore(appContext)
+                BinRepositoryImpl(database.binDao(), dataStore, appContext)
+            }
 
 
         val settings = repository.notificationSettings.first()
