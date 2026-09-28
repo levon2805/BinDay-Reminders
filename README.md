@@ -5,7 +5,15 @@
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3%20Expressive-purple.svg)](https://developer.android.com/)
 [![Tests](https://img.shields.io/badge/Unit%20Tests-139%20Passing-success.svg)](docs/DEVELOPMENT_AND_TESTING.md)
 
-**BinDay: Reminders** is a portfolio-grade, native Android application engineered to streamline and simplify household waste management across the United Kingdom. Built as a demonstration of modern Android software architecture and Jetpack Compose engineering, BinDay features UK postcode auto-matching against 380+ local councils, custom Canvas dual-colour wheelie bin visualisations (body + lid colours), an Eco-Sleek design system with 52dp rounded top bar logos, bank holiday schedule shift calculations, 1-click RFC 5545 iCalendar exports, and a triple-layer exact notification engine.
+**BinDay: Reminders** is a native Android application engineered to streamline and simplify household waste management across the United Kingdom. Built as a demonstration of modern Android software architecture and Jetpack Compose engineering, BinDay features UK postcode auto-matching against 380+ local councils, custom Canvas dual-colour wheelie bin visualisations (body + lid colours), an Eco-Sleek design system with 52dp rounded top bar logos, bank holiday schedule shift calculations, 1-click RFC 5545 iCalendar exports, and a triple-layer exact notification engine.
+
+---
+## How it looks!
+<img width="22%" height="2412" alt="1000074008" src="https://github.com/user-attachments/assets/53942e88-b739-486b-a356-ef63a494f9d0" />
+<img width="22%" height="2412" alt="1000074009" src="https://github.com/user-attachments/assets/66bb6dbd-ea85-49b1-89a4-c1f03b0c493e" />
+<img width="22%" height="2412" alt="1000074010" src="https://github.com/user-attachments/assets/da41827c-fa9f-4283-8e6c-f04d9c4e78ef" />
+<img width="22%" height="2412" alt="1000074011" src="https://github.com/user-attachments/assets/ddc0d780-6f7d-45de-a687-7c55007be989" />
+
 
 ---
 
