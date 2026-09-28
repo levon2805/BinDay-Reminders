@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.example.binminder.BinMinderApplication
 import com.example.binminder.data.local.AppDatabase
 import com.example.binminder.data.local.NotificationSettingsDataStore
 import com.example.binminder.data.repository.BinRepositoryImpl
@@ -33,10 +34,12 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val database = AppDatabase.getInstance(appContext)
-                val dataStore = NotificationSettingsDataStore(appContext)
-                val repository = BinRepositoryImpl(database.binDao(), dataStore, appContext)
-
+                val repository = (appContext as? BinMinderApplication)?.container?.binRepository
+                    ?: run {
+                        val database = AppDatabase.getInstance(appContext)
+                        val dataStore = NotificationSettingsDataStore(appContext)
+                        BinRepositoryImpl(database.binDao(), dataStore, appContext)
+                    }
 
                 val settings = repository.notificationSettings.first()
                 if (!settings.reminderEnabled) {
@@ -103,7 +106,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
                 }
 
                 // Recalculate target times and set next exact alarms / WorkManager tasks
-                NotificationScheduler.scheduleNotificationWorker(appContext)
+                NotificationScheduler.scheduleNotificationWorkerSuspend(appContext)
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling alarm broadcast", e)
             } finally {

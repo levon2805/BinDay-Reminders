@@ -317,7 +317,7 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun testSelectingNonePrimaryPreservesExtraTimesInOnboarding() {
+    fun testSelectingNonePrimaryClearsExtraTimesInOnboarding() {
         val extraEvening = LocalTime.of(21, 0)
         viewModel.addExtraReminderTime(extraEvening)
         assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
@@ -325,7 +325,7 @@ class OnboardingViewModelTest {
         viewModel.updateEveningReminderTime(null)
         assertNull(viewModel.uiState.value.primaryEveningTime)
         assertNull(viewModel.uiState.value.eveningReminderTime)
-        assertTrue(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
+        assertFalse(viewModel.uiState.value.eveningReminderTimes.contains(extraEvening))
     }
 
     @Test

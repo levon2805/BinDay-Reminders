@@ -33,7 +33,7 @@ class BootReceiver : BroadcastReceiver() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    NotificationScheduler.scheduleNotificationWorker(appContext)
+                    NotificationScheduler.scheduleNotificationWorkerSuspend(appContext)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error rescheduling notifications on boot", e)
                 } finally {
