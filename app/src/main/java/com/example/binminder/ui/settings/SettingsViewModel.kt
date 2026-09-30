@@ -12,6 +12,7 @@ import com.example.binminder.domain.ResetTimetableUseCase
 import com.example.binminder.engine.BankHolidayCalculator
 import com.example.binminder.engine.BankHolidayShiftPreview
 import com.example.binminder.engine.ScheduleEngine
+import com.example.binminder.widget.BinDayWidgetProvider
 import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -113,10 +114,11 @@ class SettingsViewModel(
     /**
      * Updates the active theme mode preference.
      */
-    fun setThemeMode(themeMode: AppThemeMode) {
+    fun setThemeMode(context: Context, themeMode: AppThemeMode) {
         viewModelScope.launch {
             repository.setThemeMode(themeMode)
             _userMessage.value = "Theme updated to ${themeMode.label}."
+            BinDayWidgetProvider.updateAllWidgets(context)
         }
     }
 

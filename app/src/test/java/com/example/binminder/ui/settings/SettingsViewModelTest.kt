@@ -241,7 +241,8 @@ class SettingsViewModelTest {
     fun testSetThemeModeToDark() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.setThemeMode(AppThemeMode.DARK)
+        val context = mockContext()
+        viewModel.setThemeMode(context, AppThemeMode.DARK)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(AppThemeMode.DARK, fakeRepository.themeModeState)
@@ -253,7 +254,8 @@ class SettingsViewModelTest {
     fun testSetThemeModeToLight() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.setThemeMode(AppThemeMode.LIGHT)
+        val context = mockContext()
+        viewModel.setThemeMode(context, AppThemeMode.LIGHT)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(AppThemeMode.LIGHT, fakeRepository.themeModeState)

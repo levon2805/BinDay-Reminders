@@ -7,4 +7,11 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="widget_background">#F8F9FA</color>
+    <color name="widget_text">#000000</color>
+    <color name="widget_text_secondary">#555555</color>
+
+    <color name="BrandVibrantLeaf">#046A38</color>
+    <color name="BrandCharcoal">#2A3439</color>
 </resources>

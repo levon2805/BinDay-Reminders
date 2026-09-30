@@ -159,7 +159,7 @@ fun SettingsScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
         onSetThemeMode = { themeMode ->
-            viewModel.setThemeMode(themeMode)
+            viewModel.setThemeMode(context, themeMode)
         },
         onToggleReminders = { enabled ->
             if (enabled) {
