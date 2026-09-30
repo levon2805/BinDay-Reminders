@@ -170,3 +170,6 @@ All code contributions must maintain 100% test pass status across all 18 test su
 ## License
 
 This project is licensed under the MIT License - see the `LICENSE` file for details.
+
+## Privacy Policy
+[BinDay: Reminders - Privacy Policy](https://gist.github.com/levon2805/e352fc32ae0af179953f58890a8741e2)
