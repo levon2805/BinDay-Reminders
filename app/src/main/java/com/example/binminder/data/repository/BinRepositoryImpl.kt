@@ -12,6 +12,7 @@ import com.example.binminder.data.model.NotificationSettings
 import com.example.binminder.data.model.OnboardingBinSetup
 import com.example.binminder.data.model.RecurrenceType
 import com.example.binminder.engine.ScheduleEngine
+import com.example.binminder.widget.BinDayWidgetProvider
 import com.example.binminder.worker.NotificationHelper
 import com.example.binminder.worker.NotificationScheduler
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,9 @@ class BinRepositoryImpl(
     private suspend fun triggerScheduleUpdate() = withContext(Dispatchers.IO) {
         runCatching {
             NotificationScheduler.scheduleNotificationWorker(applicationContext)
+        }
+        runCatching {
+            BinDayWidgetProvider.updateAllWidgets(applicationContext)
         }
     }
 
@@ -255,6 +259,7 @@ class BinRepositoryImpl(
     override suspend fun updatePutOutBins(binIds: Set<String>): Unit = withContext(Dispatchers.IO) {
         notificationSettingsDataStore.setPutOutBinIds(binIds)
         NotificationScheduler.scheduleNotificationWorker(applicationContext)
+        BinDayWidgetProvider.updateAllWidgets(applicationContext)
     }
 
     /**
@@ -347,6 +352,7 @@ class BinRepositoryImpl(
 
         updateNotificationSettings(settingsWithPreservedTheme)
         setOnboardingCompleted(true)
+        BinDayWidgetProvider.updateAllWidgets(applicationContext)
     }
 
     /**
