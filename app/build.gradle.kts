@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.binminder"
+    namespace = "com.levdev.binday"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.binminder"
+        applicationId = "com.levdev.binday"
         minSdk = 26
         targetSdk = 37
         versionCode = 1

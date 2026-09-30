@@ -88,7 +88,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 3. Launch BinDay from the app drawer or via ADB:
 
 ```bash
-adb shell am start -n com.example.binminder/.MainActivity
+adb shell am start -n com.levdev.binday/.MainActivity
 ```
 
 ---

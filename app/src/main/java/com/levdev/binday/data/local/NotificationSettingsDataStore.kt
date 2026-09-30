@@ -1,0 +1,208 @@
+package com.levdev.binday.data.local
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.levdev.binday.data.model.AppThemeMode
+import com.levdev.binday.data.model.NotificationSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import java.io.IOException
+import java.time.LocalTime
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "notification_settings")
+
+/**
+ * DataStore manager for persistent user preferences and application state.
+ * 
+ * Handles notification settings, theme preferences, onboarding state, and council location info.
+ */
+class NotificationSettingsDataStore(context: Context) {
+
+    private val applicationContext = context.applicationContext
+
+    private val safeData: Flow<Preferences>
+        get() = applicationContext.dataStore.data.catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                emit(emptyPreferences())
+            }
+        }
+
+    private object Keys {
+        val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
+        val EVENING_REMINDER_TIME = stringPreferencesKey("evening_reminder_time")
+        val MORNING_REMINDER_TIME = stringPreferencesKey("morning_reminder_time")
+        val EVENING_REMINDER_TIMES = stringSetPreferencesKey("evening_reminder_times")
+        val MORNING_REMINDER_TIMES = stringSetPreferencesKey("morning_reminder_times")
+        val PUT_OUT_BIN_IDS = stringSetPreferencesKey("put_out_bin_ids")
+        val REMINDER_HOUR = intPreferencesKey("reminder_hour")
+        val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
+        val REMINDER_EVENING_BEFORE = booleanPreferencesKey("reminder_evening_before")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val POSTCODE_OR_COUNCIL = stringPreferencesKey("postcode_or_council")
+        val PRIMARY_COLLECTION_DAY = stringPreferencesKey("primary_collection_day")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+    }
+
+    /**
+     * Observes current notification settings including reminder times and theme mode.
+     */
+    val notificationSettings: Flow<NotificationSettings> = safeData.map { prefs ->
+        val enabled = prefs[Keys.REMINDER_ENABLED] ?: true
+        val themeModeRaw = prefs[Keys.THEME_MODE]
+        val mode = themeModeRaw?.let { runCatching { AppThemeMode.valueOf(it) }.getOrNull() } ?: AppThemeMode.SYSTEM
+
+        val eveningStr = prefs[Keys.EVENING_REMINDER_TIME]
+        val primaryEveningTime: LocalTime? = when {
+            eveningStr == "NONE" -> null
+            eveningStr != null -> runCatching { LocalTime.parse(eveningStr) }.getOrNull()
+            else -> {
+                val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: true
+                if (legacyEvening) {
+                    val hour = prefs[Keys.REMINDER_HOUR] ?: 19
+                    val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                    LocalTime.of(hour, minute)
+                } else null
+            }
+        }
+
+        val eveningSet = prefs[Keys.EVENING_REMINDER_TIMES]
+        val eveningReminderTimes: Set<LocalTime> = if (eveningSet != null) {
+            val times = eveningSet.mapNotNull { runCatching { LocalTime.parse(it) }.getOrNull() }.toSet()
+            if (primaryEveningTime != null) times + primaryEveningTime else times
+        } else {
+            if (primaryEveningTime != null) setOf(primaryEveningTime) else emptySet()
+        }
+
+        val morningStr = prefs[Keys.MORNING_REMINDER_TIME]
+        val primaryMorningTime: LocalTime? = when {
+            morningStr == "NONE" -> null
+            morningStr != null -> runCatching { LocalTime.parse(morningStr) }.getOrNull()
+            else -> {
+                val legacyEvening = prefs[Keys.REMINDER_EVENING_BEFORE] ?: false
+                if (!legacyEvening) {
+                    val hour = prefs[Keys.REMINDER_HOUR] ?: 7
+                    val minute = prefs[Keys.REMINDER_MINUTE] ?: 0
+                    LocalTime.of(hour, minute)
+                } else null
+            }
+        }
+
+        val morningSet = prefs[Keys.MORNING_REMINDER_TIMES]
+        val morningReminderTimes: Set<LocalTime> = if (morningSet != null) {
+            val times = morningSet.mapNotNull { runCatching { LocalTime.parse(it) }.getOrNull() }.toSet()
+            if (primaryMorningTime != null) times + primaryMorningTime else times
+        } else {
+            if (primaryMorningTime != null) setOf(primaryMorningTime) else emptySet()
+        }
+
+        NotificationSettings(
+            reminderEnabled = enabled,
+            primaryEveningTime = primaryEveningTime,
+            primaryMorningTime = primaryMorningTime,
+            eveningReminderTimes = eveningReminderTimes,
+            morningReminderTimes = morningReminderTimes,
+            themeMode = mode
+        )
+    }
+
+    /**
+     * Observes the set of bin IDs currently marked as put out for collection.
+     */
+    val putOutBinIds: Flow<Set<String>> = safeData.map { prefs ->
+        prefs[Keys.PUT_OUT_BIN_IDS] ?: emptySet()
+    }
+
+    /**
+     * Updates the saved put out bin IDs set.
+     */
+    suspend fun setPutOutBinIds(binIds: Set<String>) {
+        runCatching {
+            applicationContext.dataStore.edit { prefs ->
+                prefs[Keys.PUT_OUT_BIN_IDS] = binIds
+            }
+        }
+    }
+
+    /**
+     * Observes the active app theme mode setting.
+     */
+    val themeMode: Flow<AppThemeMode> = safeData.map { prefs ->
+        val raw = prefs[Keys.THEME_MODE]
+        raw?.let { runCatching { AppThemeMode.valueOf(it) }.getOrNull() } ?: AppThemeMode.SYSTEM
+    }
+
+    /**
+     * Observes whether the first-time setup onboarding flow has been completed.
+     */
+    val onboardingCompleted: Flow<Boolean> = safeData.map { prefs ->
+        prefs[Keys.ONBOARDING_COMPLETED] ?: false
+    }
+
+    /**
+     * Observes saved postcode or council name information.
+     */
+    val postcodeOrCouncil: Flow<String> = safeData.map { prefs ->
+        prefs[Keys.POSTCODE_OR_COUNCIL] ?: ""
+    }
+
+    /**
+     * Updates the saved theme preference option.
+     */
+    suspend fun setThemeMode(themeMode: AppThemeMode) {
+        runCatching {
+            applicationContext.dataStore.edit { prefs ->
+                prefs[Keys.THEME_MODE] = themeMode.name
+            }
+        }
+    }
+
+    /**
+     * Updates the onboarding completion status flag.
+     */
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        runCatching {
+            applicationContext.dataStore.edit { prefs ->
+                prefs[Keys.ONBOARDING_COMPLETED] = completed
+            }
+        }
+    }
+
+    /**
+     * Saves user council and postcode preferences gathered during onboarding.
+     */
+    suspend fun saveOnboardingInfo(postcodeOrCouncil: String, primaryDay: String) {
+        runCatching {
+            applicationContext.dataStore.edit { prefs ->
+                prefs[Keys.POSTCODE_OR_COUNCIL] = postcodeOrCouncil
+                prefs[Keys.PRIMARY_COLLECTION_DAY] = primaryDay
+            }
+        }
+    }
+
+    /**
+     * Updates notification settings including reminder schedule and theme choices.
+     */
+    suspend fun updateSettings(settings: NotificationSettings) {
+        runCatching {
+            applicationContext.dataStore.edit { prefs ->
+                prefs[Keys.REMINDER_ENABLED] = settings.reminderEnabled
+                prefs[Keys.EVENING_REMINDER_TIMES] = settings.eveningReminderTimes.map { it.toString() }.toSet()
+                prefs[Keys.MORNING_REMINDER_TIMES] = settings.morningReminderTimes.map { it.toString() }.toSet()
+                prefs[Keys.EVENING_REMINDER_TIME] = settings.primaryEveningTime?.toString() ?: "NONE"
+                prefs[Keys.MORNING_REMINDER_TIME] = settings.primaryMorningTime?.toString() ?: "NONE"
+                prefs[Keys.THEME_MODE] = settings.themeMode.name
+            }
+        }
+    }
+}

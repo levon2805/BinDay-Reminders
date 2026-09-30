@@ -1,0 +1,292 @@
+package com.levdev.binday.ui.navigation
+
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
+import com.levdev.binday.di.AppContainer
+import com.levdev.binday.ui.addedit.AddEditBinScreen
+import com.levdev.binday.ui.addedit.AddEditBinViewModel
+import com.levdev.binday.ui.bins.BinListScreen
+import com.levdev.binday.ui.bins.BinListViewModel
+import com.levdev.binday.ui.dashboard.DashboardScreen
+import com.levdev.binday.ui.dashboard.DashboardViewModel
+import com.levdev.binday.ui.factory.ViewModelFactory
+import com.levdev.binday.ui.onboarding.OnboardingScreen
+import com.levdev.binday.ui.onboarding.OnboardingViewModel
+import com.levdev.binday.ui.settings.SettingsScreen
+import com.levdev.binday.ui.settings.SettingsViewModel
+import kotlinx.coroutines.launch
+
+private fun <T : NavKey> NavBackStack<T>.set(elements: List<T>) {
+    clear()
+    addAll(elements)
+}
+
+/**
+ * Main scaffold hosting navigation display and bottom navigation bar.
+ * 
+ * Directs users between the timetable dashboard, bin management list, settings,
+ * and the first-time onboarding wizard.
+ */
+@Composable
+fun MainScreen(
+    appContainer: AppContainer,
+    modifier: Modifier = Modifier
+) {
+    val repository = appContainer.binRepository
+    val onboardingCompletedState by repository.onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
+
+    when (val completed = onboardingCompletedState) {
+        null -> {
+            // Render a clean loading box / splash indicator while resolving onboarding status
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        else -> {
+            val startDestination = if (completed) Screen.Dashboard else Screen.Onboarding
+            MainNavigationContent(
+                appContainer = appContainer,
+                startDestination = startDestination,
+                modifier = modifier
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainNavigationContent(
+    appContainer: AppContainer,
+    startDestination: Screen,
+    modifier: Modifier = Modifier
+) {
+    val repository = appContainer.binRepository
+    val factory = remember(appContainer) { ViewModelFactory(appContainer) }
+    val navBackStack = rememberNavBackStack(startDestination)
+    val coroutineScope = rememberCoroutineScope()
+    val onboardingCompleted by repository.onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
+
+    LaunchedEffect(onboardingCompleted) {
+        if (onboardingCompleted == false) {
+            navBackStack.set(listOf(Screen.Onboarding))
+        }
+    }
+
+    LaunchedEffect(startDestination) {
+        runCatching {
+            if (startDestination == Screen.Dashboard) {
+                repository.ensureDefaultBinsInitialized()
+            }
+        }.onFailure { exception ->
+            Log.e("BinDay", "Error initializing default bins in MainScreen", exception)
+        }
+    }
+
+    val currentScreen = navBackStack.lastOrNull() ?: startDestination
+    val isBottomBarVisible = currentScreen !is Screen.AddEditBin && currentScreen !is Screen.Onboarding
+
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            AnimatedVisibility(
+                visible = isBottomBarVisible,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+            ) {
+                NavigationBar {
+                    BottomNavItem.entries.forEach { item ->
+                        val isSelected = currentScreen == item.screen
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                try {
+                                    if (!isSelected) {
+                                        navBackStack.clear()
+                                        navBackStack.add(item.screen)
+                                    }
+                                } catch (exception: Exception) {
+                                    Log.e("BinDay", "Error navigating to ${item.title} in MainScreen", exception)
+                                }
+                            },
+                            icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
+                            label = { Text(text = item.title) }
+                        )
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    ) { innerPadding ->
+        NavDisplay(
+            backStack = navBackStack,
+            onBack = {
+                try {
+                    if (navBackStack.size > 1) {
+                        navBackStack.removeLastOrNull()
+                    }
+                } catch (exception: Exception) {
+                    Log.e("BinDay", "Error during onBack in MainScreen NavDisplay", exception)
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            entryProvider = entryProvider {
+                entry<Screen.Onboarding> {
+                    val onboardingViewModel: OnboardingViewModel = viewModel(factory = factory)
+                    OnboardingScreen(
+                        viewModel = onboardingViewModel,
+                        onOnboardingComplete = {
+                            try {
+                                navBackStack.clear()
+                                navBackStack.add(Screen.Dashboard)
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to Dashboard on onboarding complete", exception)
+                            }
+                        }
+                    )
+                }
+
+                entry<Screen.Dashboard> {
+                    val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
+                    DashboardScreen(
+                        viewModel = dashboardViewModel,
+                        onNavigateToAddBin = {
+                            try {
+                                navBackStack.add(Screen.AddEditBin())
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to AddBin", exception)
+                            }
+                        },
+                        onNavigateToBinDetail = { binId ->
+                            try {
+                                navBackStack.add(Screen.AddEditBin(binId))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to BinDetail", exception)
+                            }
+                        },
+                        onNavigateToSettings = {
+                            try {
+                                navBackStack.clear()
+                                navBackStack.add(Screen.Settings)
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to Settings", exception)
+                            }
+                        },
+                        onRunSetupWizard = {
+                            try {
+                                coroutineScope.launch {
+                                    repository.resetTimetableAndAddress()
+                                }
+                                navBackStack.set(listOf(Screen.Onboarding))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error re-running setup wizard from Dashboard", exception)
+                            }
+                        }
+                    )
+                }
+
+                entry<Screen.BinList> {
+                    val binListViewModel: BinListViewModel = viewModel(factory = factory)
+                    BinListScreen(
+                        viewModel = binListViewModel,
+                        onNavigateToAddBin = {
+                            try {
+                                navBackStack.add(Screen.AddEditBin())
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to AddBin from BinList", exception)
+                            }
+                        },
+                        onNavigateToEditBin = { binId ->
+                            try {
+                                navBackStack.add(Screen.AddEditBin(binId))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating to EditBin from BinList", exception)
+                            }
+                        },
+                        onRunSetupWizard = {
+                            try {
+                                coroutineScope.launch {
+                                    repository.resetTimetableAndAddress()
+                                }
+                                navBackStack.set(listOf(Screen.Onboarding))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error re-running setup wizard from BinList", exception)
+                            }
+                        }
+                    )
+                }
+
+                entry<Screen.AddEditBin> { key ->
+                    val addEditViewModel: AddEditBinViewModel = viewModel(
+                        key = "add_edit_${key.binId ?: 0L}",
+                        factory = factory
+                    )
+                    AddEditBinScreen(
+                        viewModel = addEditViewModel,
+                        binId = key.binId,
+                        onNavigateBack = {
+                            try {
+                                if (navBackStack.size > 1) {
+                                    navBackStack.removeLastOrNull()
+                                } else {
+                                    navBackStack.clear()
+                                    navBackStack.add(Screen.BinList)
+                                }
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error navigating back from AddEditBin", exception)
+                            }
+                        }
+                    )
+                }
+
+                entry<Screen.Settings> {
+                    val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onReRunSetupWizard = {
+                            try {
+                                coroutineScope.launch {
+                                    repository.resetTimetableAndAddress()
+                                }
+                                navBackStack.set(listOf(Screen.Onboarding))
+                            } catch (exception: Exception) {
+                                Log.e("BinDay", "Error re-running setup wizard from Settings", exception)
+                            }
+                        }
+                    )
+                }
+            }
+        )
+    }
+}

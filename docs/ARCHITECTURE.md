@@ -34,7 +34,7 @@
 
 ---
 
-### 1. Presentation Layer (`com.example.binminder.ui`)
+### 1. Presentation Layer (`com.levdev.binday.ui`)
 
 The presentation layer is fully declarative, relying on **Jetpack Compose** with Material Design 3 Expressive components and custom Eco-Sleek design tokens.
 
@@ -57,7 +57,7 @@ The presentation layer is fully declarative, relying on **Jetpack Compose** with
 
 ---
 
-### 2. Domain Layer (`com.example.binminder.domain`)
+### 2. Domain Layer (`com.levdev.binday.domain`)
 
 The domain layer encapsulates business rules into pure, reusable Kotlin Use Cases independent of any UI or Android framework dependencies:
 
@@ -68,7 +68,7 @@ The domain layer encapsulates business rules into pure, reusable Kotlin Use Case
 
 ---
 
-### 3. Data Layer (`com.example.binminder.data`)
+### 3. Data Layer (`com.levdev.binday.data`)
 
 The data layer implements data storage, remote API communication, and repository abstractions.
 
@@ -91,7 +91,7 @@ The data layer implements data storage, remote API communication, and repository
 
 ---
 
-### 4. Engine Layer (`com.example.binminder.engine`)
+### 4. Engine Layer (`com.levdev.binday.engine`)
 
 Pure logic engine components handling domain-specific algorithms:
 
@@ -105,7 +105,7 @@ Pure logic engine components handling domain-specific algorithms:
 
 ---
 
-### 5. Background Scheduling & Receiver Layer (`com.example.binminder.worker`)
+### 5. Background Scheduling & Receiver Layer (`com.levdev.binday.worker`)
 
 Handles notification scheduling, exact system alarms, background sync, and notification shade interaction:
 
@@ -118,7 +118,7 @@ Handles notification scheduling, exact system alarms, background sync, and notif
   * Evaluates active reminder slots, verifies un-put-out status for the target collection date via `putOutBins`, formats reminder text via `NotificationHelper`, and triggers high-priority heads-up system notifications.
   * Automatically invokes `NotificationScheduler` to reschedule subsequent alarms upon execution.
 * **`NotificationActionReceiver` (`MarkBinPutOutReceiver`)**:
-  * Direct `BroadcastReceiver` handling interactive "Put Bins Out" ("Mark as Put Out") notification shade quick actions (`com.example.binminder.ACTION_MARK_PUT_OUT`).
+  * Direct `BroadcastReceiver` handling interactive "Put Bins Out" ("Mark as Put Out") notification shade quick actions (`com.levdev.binday.ACTION_MARK_PUT_OUT`).
   * Executes asynchronously via `goAsync()`, invoking `ToggleBinPutOutUseCase` to update `putOutBins` in DataStore without launching the app UI, and cancels the active notification banner.
 * **`BootReceiver`**:
   * Listens for `ACTION_BOOT_COMPLETED`, `ACTION_MY_PACKAGE_REPLACED`, `ACTION_LOCKED_BOOT_COMPLETED`, and `QUICKBOOT_POWERON` broadcasts.

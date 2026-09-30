@@ -49,7 +49,7 @@ This document details the core features and functional mechanics built into **Bi
 ## 5. Interactive Notification Shade Action Buttons ("Put Bins Out")
 
 * **Shade-Native Interaction**:
-  * System heads-up notifications include an interactive "Done" / "Mark as Put Out" action button (`com.example.binminder.ACTION_MARK_PUT_OUT`).
+  * System heads-up notifications include an interactive "Done" / "Mark as Put Out" action button (`com.levdev.binday.ACTION_MARK_PUT_OUT`).
 * **Asynchronous `NotificationActionReceiver`**:
   * Handled by `MarkBinPutOutReceiver` using `goAsync()`.
   * Extracts target collection date and bin IDs from notification intent extras, marks bins as put out without launching the main UI, and cancels the notification banner immediately.
