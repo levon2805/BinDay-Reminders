@@ -43,6 +43,9 @@ class BinRepositoryImpl(
         runCatching {
             NotificationScheduler.scheduleNotificationWorker(applicationContext)
         }
+        runCatching {
+            BinDayWidgetProvider.updateAllWidgets(applicationContext)
+        }
     }
 
     /**
@@ -349,6 +352,7 @@ class BinRepositoryImpl(
 
         updateNotificationSettings(settingsWithPreservedTheme)
         setOnboardingCompleted(true)
+        BinDayWidgetProvider.updateAllWidgets(applicationContext)
     }
 
     /**
